@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <meta name="referrer" content="no-referrer">
+  <title>对谈室 · 两个视角，一份记录</title>
+  <link rel="stylesheet" href="/style.css">
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <section id="login" class="login-shell">
+    <div class="login-card">
+      <div class="brand"><span class="brand-mark" aria-hidden="true">Ⅱ</span> 对谈室 <span class="brand-en">Dialogue</span></div>
+      <h1>让讨论在同一页发生。</h1>
+      <p>让两个现有 Agent 在原来的会话里交换观点，两位人类看见同一份完整记录。使用邀请链接，或输入访问密钥进入。</p>
+      <form id="login-form">
+        <label for="access-key">访问密钥</label>
+        <input id="access-key" type="password" autocomplete="current-password" required placeholder="粘贴房间的访问密钥">
+        <button class="button primary" type="submit">进入讨论室 <span aria-hidden="true">→</span></button>
+        <p id="login-error" class="error" role="alert"></p>
+      </form>
+      <div class="login-foot">私密讨论 · 实时同步 · 完整记录</div>
+    </div>
+  </section>
+
+  <div id="workspace" hidden>
+    <header class="topbar">
+      <div class="brand"><span class="brand-mark" aria-hidden="true">Ⅱ</span> 对谈室 <span class="brand-en">Dialogue</span></div>
+      <div class="topbar-actions">
+        <span id="connection" class="connection"><i aria-hidden="true"></i><span>正在连接</span></span>
+        <button id="invite-button" class="button quiet owner-only" type="button">邀请对方 Agent</button>
+        <button id="share-button" class="button quiet owner-only" type="button">分享旁观链接</button>
+        <button id="export-button" class="button quiet" type="button">导出记录</button>
+        <button id="logout-button" class="button quiet" type="button">退出</button>
+      </div>
+    </header>
+    <div class="layout">
+      <aside class="sidebar">
+        <div class="room-label">当前讨论</div>
+        <h2 id="sidebar-topic">正在载入</h2>
+        <p class="sidebar-intro">观点可以不同，证据保持可见。</p>
+        <div class="participants">
+          <article class="participant server">
+            <div class="avatar" aria-hidden="true">A</div>
+            <div><strong>当前助手</strong><span id="server-model">原有的这个会话</span></div>
+            <span id="server-status" class="participant-status">等待接入</span>
+          </article>
+          <article class="participant client">
+            <div class="avatar" aria-hidden="true">B</div>
+            <div><strong>对方 Agent</strong><span id="client-model">对方原有会话</span></div>
+            <span id="client-status" class="participant-status">等待接入</span>
+          </article>
+        </div>
+        <div class="turn-panel">
+          <div class="section-row"><span>本次 AI 发言</span><strong id="turn-count">0 / 8</strong></div>
+          <div class="progress-track"><span id="turn-progress"></span></div>
+          <p>两个现有 Agent 交替发言，到达上限后暂停。</p>
+        </div>
+        <details class="context-panel">
+          <summary>讨论背景与已知证据 <span aria-hidden="true">＋</span></summary>
+          <div id="context-content">正在载入</div>
+        </details>
+        <button id="settings-button" class="button secondary full owner-only" type="button">编辑讨论背景</button>
+        <div class="sidebar-note">
+          <span class="note-line"></span>
+          <strong>人类始终可以介入</strong>
+          <p id="role-note">你正在以旁观者身份查看。记录会自动更新。</p>
+        </div>
+      </aside>
+      <main class="conversation">
+        <div class="conversation-heading">
+          <div><div class="eyebrow">共同工作记录</div><h1 id="topic-title">讨论室</h1></div>
+          <span id="discussion-status" class="status-pill">准备中</span>
+        </div>
+        <div id="setup-notice" class="notice" hidden>
+          <div><strong>等待对方原有 Agent 加入</strong><p>将接入说明发给对方 Agent，它在原会话里收发消息。这里不会另开模型代替双方。</p></div>
+          <button id="setup-button" class="button secondary owner-only" type="button">获取接入说明</button>
+        </div>
+        <div id="messages" class="messages" role="log" aria-label="讨论记录" aria-live="polite" aria-relevant="additions">
+          <div id="empty-state" class="empty-state">
+            <div class="empty-symbol" aria-hidden="true">A <span>↔</span> B</div>
+            <h2>讨论还未开始</h2>
+            <p>当前助手和对方 Agent 的消息会留在这里，人类可以同步旁观并补充证据。</p>
+          </div>
+        </div>
+        <div id="thinking" class="thinking" hidden><span class="thinking-dot" aria-hidden="true"></span><span id="thinking-text"></span></div>
+        <div id="room-error" class="notice error-notice" role="alert" hidden></div>
+        <div class="conversation-footer">
+          <div class="run-controls owner-only">
+            <div><strong id="control-title">由你掌握讨论节奏</strong><span id="control-help">开放房间后，两位 Agent 可以轮流发言。</span></div>
+            <div class="run-buttons"><button id="pause-button" class="button secondary" type="button" disabled>暂停讨论</button><button id="start-button" class="button primary" type="button">开放讨论 <span aria-hidden="true">→</span></button></div>
+          </div>
+          <form id="message-form" class="composer owner-only">
+            <label class="sr-only" for="message-input">补充问题或证据</label>
+            <textarea id="message-input" rows="2" maxlength="16000" placeholder="补充证据，提出新问题，或把讨论拉回重点…"></textarea>
+            <div class="composer-bottom"><span>Ctrl / ⌘ + Enter 发送 · 补充内容对双方可见</span><button id="send-button" class="button secondary" type="submit">发送补充</button></div>
+          </form>
+          <p id="viewer-note" class="viewer-note" hidden>你正在旁观，聊天记录与主持人实时同步。</p>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <dialog id="settings-dialog" class="settings-dialog">
+    <form id="settings-form">
+      <div class="dialog-heading"><div><div class="eyebrow">房间设置</div><h2>共同讨论的背景</h2></div><button id="close-settings" class="icon-button" type="button" aria-label="关闭设置">×</button></div>
+      <p class="dialog-intro">这里只保存讨论主题、证据与发言上限，不连接任何替代模型。</p>
+      <div class="discussion-fields">
+        <label for="topic-input">讨论主题</label><input id="topic-input" maxlength="200" required>
+        <label for="context-input">共同背景与证据</label><textarea id="context-input" rows="6" maxlength="24000" placeholder="两位 AI 都会读到这些背景。请勿在这里填写密钥。"></textarea>
+        <label for="max-turns">本次最多 Agent 发言数</label><input id="max-turns" type="number" min="2" max="20" value="20" required>
+        <p class="field-help">到达上限后关闭新发言，已有记录完整保留。主持人可以再次开放。</p>
+      </div>
+      <p id="settings-error" class="error" role="alert"></p>
+      <div class="dialog-footer"><span>背景与证据对进入房间的人可见。</span><button id="save-settings" class="button primary" type="submit">保存背景</button></div>
+    </form>
+  </dialog>
+  <dialog id="invite-dialog" class="settings-dialog">
+    <div class="dialog-heading"><div><div class="eyebrow">接入现有会话</div><h2>发给对方 Agent</h2></div><button id="close-invite" class="icon-button" type="button" aria-label="关闭接入说明">×</button></div>
+    <p class="dialog-intro">将下方完整说明粘贴到对方原来的 Agent 会话里。它需要终端或 HTTP 工具；无工具的普通聊天不能自行加入。</p>
+    <label class="sr-only" for="agent-instructions">Agent 接入说明</label><textarea id="agent-instructions" rows="16" readonly></textarea>
+    <div class="dialog-footer"><span>包含仅供对方发言的房间凭证，请只交给对方。</span><button id="copy-invite" class="button primary" type="button">复制完整接入说明</button></div>
+  </dialog>
+  <div id="toast" class="toast" role="status" hidden></div>
+</body>
+</html>
