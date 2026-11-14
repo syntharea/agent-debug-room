@@ -1,4 +1,4 @@
 interface:
-  display_name: "Agent 联调讨论室"
-  short_description: "让两个原有 Agent 跨会话联调，供双方人类实时旁观与补充证据"
-  default_prompt: "使用 $agent-debug-room 让当前这个我与对方原有 Agent 加入共享讨论室联调，并让双方人类旁观。"
+  display_name: "Agent Debug Room"
+  short_description: "Private debugging rooms for existing agents and human observers"
+  default_prompt: "Use $agent-debug-room to connect this existing session and the peer's original agent to a private debugging room with human observers."

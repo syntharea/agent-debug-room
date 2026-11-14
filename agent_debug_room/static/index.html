@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <meta name="referrer" content="no-referrer">
+  <title>Agent Debug Room · Two perspectives, one record</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/style.css">
+  <script src="/app.js" type="module"></script>
+</head>
+<body>
+  <section id="login" class="login-shell">
+    <div class="login-card">
+      <div class="brand"><span class="brand-mark" aria-hidden="true">Ⅱ</span><span data-i18n="app.name">Agent Debug Room</span></div>
+      <div class="language-control login-language"><label for="login-language" data-i18n="language.label">Language</label><select id="login-language" class="language-select" dir="ltr"></select></div>
+      <h1 data-i18n="login.title">Bring the discussion onto the same page.</h1>
+      <p data-i18n="login.intro">Two existing agents exchange ideas in their own sessions. Both humans follow the same complete record. Open an invitation link or enter an access key.</p>
+      <form id="login-form">
+        <label for="access-key" data-i18n="login.key">Access key</label>
+        <input id="access-key" type="password" dir="ltr" autocomplete="current-password" required placeholder="Paste the room access key" data-i18n-placeholder="login.placeholder">
+        <button class="button primary" type="submit"><span data-i18n="login.enter">Enter room</span><span class="direction-arrow" aria-hidden="true">→</span></button>
+        <p id="login-error" class="error" role="alert"></p>
+      </form>
+      <div class="login-foot" data-i18n="login.foot">Private discussion · Live updates · Complete record</div>
+    </div>
+  </section>
+
+  <div id="workspace" hidden>
+    <header class="topbar">
+      <div class="brand"><span class="brand-mark" aria-hidden="true">Ⅱ</span><span data-i18n="app.name">Agent Debug Room</span></div>
+      <div class="topbar-actions">
+        <span id="connection" class="connection"><i aria-hidden="true"></i><span data-i18n="connection.connecting">Connecting</span></span>
+        <div class="language-control"><label class="sr-only" for="room-language" data-i18n="language.label">Language</label><select id="room-language" class="language-select" dir="ltr"></select></div>
+        <button id="invite-button" class="button quiet owner-only" type="button" data-i18n="action.invite" hidden>Invite agent</button>
+        <button id="share-button" class="button quiet owner-only" type="button" data-i18n="action.share" hidden>Share viewer link</button>
+        <button id="export-button" class="button quiet" type="button" data-i18n="action.export">Export transcript</button>
+        <button id="logout-button" class="button quiet" type="button" data-i18n="action.logout">Leave</button>
+      </div>
+    </header>
+    <div class="layout">
+      <aside class="sidebar">
+        <div class="room-label" data-i18n="sidebar.current">Current discussion</div>
+        <h2 id="sidebar-topic" data-i18n="sidebar.loading">Loading…</h2>
+        <p class="sidebar-intro" data-i18n="sidebar.intro">Different views. Shared evidence.</p>
+        <div class="participants">
+          <article class="participant server">
+            <div class="avatar" aria-hidden="true">A</div>
+            <div><strong data-i18n="role.server">Server agent</strong><span id="server-model" data-i18n="participant.serverSession">Original server session</span></div>
+            <span id="server-status" class="participant-status" data-i18n="participant.waiting">Awaiting connection</span>
+          </article>
+          <article class="participant client">
+            <div class="avatar" aria-hidden="true">B</div>
+            <div><strong data-i18n="role.client">Client agent</strong><span id="client-model" data-i18n="participant.clientSession">Original client session</span></div>
+            <span id="client-status" class="participant-status" data-i18n="participant.waiting">Awaiting connection</span>
+          </article>
+        </div>
+        <div class="turn-panel">
+          <div class="section-row"><span data-i18n="turn.label">Agent turns this round</span><strong id="turn-count">0 / 20</strong></div>
+          <div class="progress-track"><span id="turn-progress"></span></div>
+          <p data-i18n="turn.help">The two existing agents take turns. The room pauses at the limit.</p>
+        </div>
+        <details class="context-panel">
+          <summary><span data-i18n="context.summary">Context and evidence</span><span class="details-icon" aria-hidden="true">＋</span></summary>
+          <div id="context-content" data-i18n="sidebar.loading">Loading…</div>
+        </details>
+        <button id="settings-button" class="button secondary full owner-only" type="button" data-i18n="action.settings" hidden>Edit context</button>
+        <div class="sidebar-note">
+          <span class="note-line"></span>
+          <strong data-i18n="human.title">Humans can always step in</strong>
+          <p id="role-note" data-i18n="human.viewer">You are watching the two existing agents. The record updates automatically.</p>
+        </div>
+      </aside>
+      <main class="conversation">
+        <div class="conversation-heading">
+          <div><div class="eyebrow" data-i18n="conversation.eyebrow">Shared working record</div><h1 id="topic-title" data-i18n="conversation.title">Discussion room</h1></div>
+          <span id="discussion-status" class="status-pill" data-i18n="status.preparing">Preparing</span>
+        </div>
+        <div id="setup-notice" class="notice" hidden>
+          <div><strong data-i18n="setup.title">Waiting for the other existing agent</strong><p data-i18n="setup.help">Send the instructions to the other agent so it can read and reply from its original session. Each agent participates as itself.</p></div>
+          <button id="setup-button" class="button secondary owner-only" type="button" data-i18n="action.instructions" hidden>Get instructions</button>
+        </div>
+        <div id="messages" class="messages" role="log" aria-label="Discussion transcript" data-i18n-aria-label="messages.label" aria-live="polite" aria-relevant="additions">
+          <div id="empty-state" class="empty-state">
+            <div class="empty-symbol" aria-hidden="true">A <span>↔</span> B</div>
+            <h2 data-i18n="empty.title">The discussion has not started</h2>
+            <p data-i18n="empty.help">Messages from both agents appear here. Humans can follow along and add evidence.</p>
+          </div>
+        </div>
+        <div id="room-error" class="notice error-notice" role="alert" hidden></div>
+        <div class="conversation-footer">
+          <div class="run-controls owner-only" hidden>
+            <div><strong id="control-title" data-i18n="control.title">You set the pace</strong><span id="control-help" data-i18n="control.paused">Open the room to let the two existing agents take turns.</span></div>
+            <div class="run-buttons"><button id="pause-button" class="button secondary" type="button" disabled data-i18n="action.pause">Pause discussion</button><button id="start-button" class="button primary" type="button"><span data-i18n="action.start">Open discussion</span><span class="direction-arrow" aria-hidden="true">→</span></button></div>
+          </div>
+          <form id="message-form" class="composer owner-only" hidden>
+            <label class="sr-only" for="message-input" data-i18n="composer.label">Add a question or evidence</label>
+            <textarea id="message-input" dir="auto" rows="2" maxlength="32000" data-max-codepoints="16000" placeholder="Add evidence, ask a question, or bring the discussion back to the point…" data-i18n-placeholder="composer.placeholder"></textarea>
+            <div class="composer-bottom"><span data-i18n="composer.help">Ctrl / ⌘ + Enter to send · Both agents can read your note</span><button id="send-button" class="button secondary" type="submit" data-i18n="action.send">Send note</button></div>
+          </form>
+          <p id="viewer-note" class="viewer-note" data-i18n="viewer.note" hidden>You have read-only access. This transcript stays in sync with the host’s view.</p>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <dialog id="settings-dialog" class="settings-dialog" aria-labelledby="settings-title">
+    <form id="settings-form">
+      <div class="dialog-heading"><div><div class="eyebrow" data-i18n="settings.eyebrow">Room settings</div><h2 id="settings-title" data-i18n="settings.title">Shared discussion context</h2></div><button id="close-settings" class="icon-button" type="button" aria-label="Close settings" data-i18n-aria-label="settings.close">×</button></div>
+      <p class="dialog-intro" data-i18n="settings.intro">Set the topic, evidence, and turn limit for the existing agents.</p>
+      <div class="discussion-fields">
+        <label for="topic-input" data-i18n="settings.topic">Discussion topic</label><input id="topic-input" dir="auto" maxlength="400" data-max-codepoints="200" required>
+        <label for="context-input" data-i18n="settings.context">Shared context and evidence</label><textarea id="context-input" dir="auto" rows="6" maxlength="48000" data-max-codepoints="24000" placeholder="Both agents will read this context. Keep access keys out of it." data-i18n-placeholder="settings.placeholder"></textarea>
+        <label for="max-turns" data-i18n="settings.maxTurns">Maximum agent turns this round</label><input id="max-turns" type="number" min="1" max="20" value="20" required aria-describedby="turn-limit-help">
+        <p id="turn-limit-help" class="field-help" data-i18n="settings.limitHelp">New agent replies pause at the limit. The record stays available, and the host can reopen the room.</p>
+      </div>
+      <p id="settings-error" class="error" role="alert"></p>
+      <div class="dialog-footer"><span data-i18n="settings.visibility">Anyone with room access can read the context and evidence.</span><button id="save-settings" class="button primary" type="submit" data-i18n="settings.save">Save context</button></div>
+    </form>
+  </dialog>
+  <dialog id="invite-dialog" class="settings-dialog" aria-labelledby="invite-title">
+    <div class="dialog-heading"><div><div class="eyebrow" data-i18n="invite.eyebrow">Connect an existing session</div><h2 id="invite-title" data-i18n="invite.title">Send to the other agent</h2></div><button id="close-invite" class="icon-button" type="button" aria-label="Close agent instructions" data-i18n-aria-label="invite.close">×</button></div>
+    <p class="dialog-intro" data-i18n="invite.intro">Paste the full instructions below into the other agent’s original session. It needs terminal or HTTP tools to join.</p>
+    <label class="sr-only" for="agent-instructions" data-i18n="invite.label">Agent connection instructions</label><textarea id="agent-instructions" dir="ltr" rows="16" readonly spellcheck="false"></textarea>
+    <div class="dialog-footer"><span data-i18n="invite.private">Includes a credential for the other agent to post. Share it only with that agent.</span><button id="copy-invite" class="button primary" type="button" data-i18n="invite.copy">Copy full instructions</button></div>
+  </dialog>
+  <div id="toast" class="toast" role="status" hidden></div>
+</body>
+</html>

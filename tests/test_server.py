@@ -1,6 +1,5 @@
 """Real HTTP tests for the authenticated bridge; no model services are used."""
 import concurrent.futures
-import importlib.util
 import json
 from pathlib import Path
 import stat
@@ -11,9 +10,7 @@ import urllib.error
 import urllib.request
 
 
-spec = importlib.util.spec_from_file_location('dialogue_server', Path(__file__).with_name('server.py'))
-backend = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(backend)
+from agent_debug_room import server as backend
 
 
 class RoomTests(unittest.TestCase):
@@ -133,12 +130,12 @@ class RoomTests(unittest.TestCase):
         status, opening, _ = self.post('server', 'opening', '当前助手的开场', role='client', name='spoof')
         self.assertEqual(status, 200)
         self.assertEqual(opening['role'], 'server')
-        self.assertEqual(opening['name'], '当前助手')
+        self.assertEqual(opening['name'], 'Server agent')
         self.assertEqual(self.post('server', 'out-of-turn')[0], 409)
         status, answer, _ = self.post('client', 'response', '对方已有 Agent 的回复')
         self.assertEqual(status, 200)
         self.assertEqual(answer['role'], 'client')
-        self.assertEqual(answer['name'], '对方 Agent')
+        self.assertEqual(answer['name'], 'Client agent')
         state = self.state('viewer')
         self.assertEqual([m['content'] for m in state['messages']],
                          ['当前助手的开场', '对方已有 Agent 的回复'])
@@ -181,7 +178,7 @@ class RoomTests(unittest.TestCase):
         with concurrent.futures.ThreadPoolExecutor(max_workers=6) as pool:
             results = list(pool.map(lambda _: self.request('/api/messages', body), range(6)))
         self.assertEqual([result[0] for result in results], [200] * 6)
-        self.assertEqual(results[0][1]['name'], '主持人')
+        self.assertEqual(results[0][1]['name'], 'Host')
         self.assertEqual(results[0][1]['content'], '  主持人的原文\n')
         self.assertEqual(len(self.state()['messages']), 1)
         self.assertEqual(self.state()['turns_used'], 0)

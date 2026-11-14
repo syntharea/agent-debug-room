@@ -1,5 +1,4 @@
 """Isolated real-HTTP helper tests; fake external CLIs never contact another agent."""
-import importlib.util
 import json
 import os
 from pathlib import Path
@@ -15,9 +14,7 @@ import urllib.request
 
 
 ROOT = Path(__file__).resolve().parents[1]
-spec = importlib.util.spec_from_file_location('bridge', ROOT / 'assets/bridge/server.py')
-backend = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(backend)
+from agent_debug_room import server as backend
 
 
 class HelperTests(unittest.TestCase):
@@ -90,6 +87,8 @@ class HelperTests(unittest.TestCase):
         result = subprocess.run([sys.executable, str(ROOT / 'scripts/room.py'), '--state-dir',
                    str(self.state), '--room-url', self.url, 'invite'], capture_output=True, text=True, timeout=5)
         self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn('existing agent session', result.stdout)
+        self.assertFalse(any('\u4e00' <= char <= '\u9fff' for char in result.stdout))
         self.assertIn(self.tokens['client_agent_token'], result.stdout)
         for key in ('owner_token', 'viewer_token', 'server_agent_token'):
             self.assertNotIn(self.tokens[key], result.stdout)
@@ -123,6 +122,7 @@ class HelperTests(unittest.TestCase):
         self.assertEqual(args[args.index('--from') + 1], 'current-fixture-terminal')
         self.assertNotIn('peer text', ' '.join(args))
         self.assertNotIn('check', args)
+        self.assertFalse(any('\u4e00' <= char <= '\u9fff' for char in ' '.join(args)))
         cursor = self.state / 'notify-cursor.json'
         self.assertEqual(stat.S_IMODE(cursor.stat().st_mode), 0o600)
         self.request('/api/control', {'action': 'pause'})
@@ -257,6 +257,7 @@ class ServeTests(unittest.TestCase):
                 if process.poll() is None:
                     process.terminate()
                 process.communicate(timeout=3)
+                self.assertEqual(process.returncode, 0, 'serve did not close gracefully on SIGTERM')
 
 
 if __name__ == '__main__':

@@ -1,0 +1,164 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+    function roomPath(rid) { return /databases/$(database)/documents/rooms/$(rid); }
+    function memberPath(rid) { return /databases/$(database)/documents/rooms/$(rid)/members/$(request.auth.uid); }
+    function keysPath(rid) { return /databases/$(database)/documents/rooms/$(rid)/secrets/keys; }
+    function quotaPath(uid) { return /databases/$(database)/documents/creation_quotas/$(uid); }
+    function messagePath(rid, mid) { return /databases/$(database)/documents/rooms/$(rid)/messages/$(mid); }
+    function validRole(role) { return role in ['owner', 'viewer', 'server_agent', 'client_agent']; }
+    function validKey(key) { return key is string && key.matches('^[A-Za-z0-9_-]{43}$'); }
+    function validRoomId(rid) { return rid.matches('^[A-Za-z0-9_-]{20,64}$'); }
+    function validMessageId(mid) { return mid is string && mid.matches('^[A-Za-z0-9_-]{1,200}$'); }
+    function nonblank(value, maximum) {
+      return value is string && value.replace('(?s).', 'x').size() <= maximum && value.matches('(?s).*[^\\s].*');
+    }
+    function member(rid) { return get(memberPath(rid)).data; }
+    function validMember(rid) {
+      return signedIn() && exists(roomPath(rid))
+        && validRole(member(rid).role)
+        && get(keysPath(rid)).data[member(rid).role] == member(rid).token;
+    }
+    function owner(rid) { return validMember(rid) && member(rid).role == 'owner'; }
+    function active(room) {
+      return !room.deleting && request.time < room.created_at + duration.value(7, 'd');
+    }
+    function validConfig(room) {
+      return nonblank(room.topic, 200) && room.context is string && room.context.replace('(?s).', 'x').size() <= 24000
+        && room.max_turns is int && room.max_turns >= 1 && room.max_turns <= 20;
+    }
+    function validKeys(keys) {
+      return keys.keys().hasAll(['owner', 'viewer', 'server_agent', 'client_agent'])
+        && keys.keys().hasOnly(['owner', 'viewer', 'server_agent', 'client_agent'])
+        && validKey(keys.owner) && validKey(keys.viewer) && validKey(keys.server_agent) && validKey(keys.client_agent)
+        && keys.owner != keys.viewer && keys.owner != keys.server_agent && keys.owner != keys.client_agent
+        && keys.viewer != keys.server_agent && keys.viewer != keys.client_agent && keys.server_agent != keys.client_agent;
+    }
+    function validQuota(quota) {
+      return quota.keys().hasAll(['window_start', 'count', 'last_room_id'])
+        && quota.keys().hasOnly(['window_start', 'count', 'last_room_id'])
+        && quota.window_start is timestamp && quota.count is int && quota.count >= 1 && quota.count <= 5
+        && validRoomId(quota.last_room_id);
+    }
+    function quotaAdvanced(uid, next) {
+      return validQuota(next) && (
+        (!exists(quotaPath(uid)) && next.window_start == request.time && next.count == 1)
+        || (exists(quotaPath(uid)) && (
+          (request.time < get(quotaPath(uid)).data.window_start + duration.value(24, 'h')
+            && next.window_start == get(quotaPath(uid)).data.window_start
+            && next.count == get(quotaPath(uid)).data.count + 1)
+          || (request.time >= get(quotaPath(uid)).data.window_start + duration.value(24, 'h')
+            && next.window_start == request.time && next.count == 1)
+        ))
+      );
+    }
+    function initialRoom(rid, data) {
+      let keys = getAfter(keysPath(rid)).data;
+      let joining = getAfter(memberPath(rid)).data;
+      let quota = getAfter(quotaPath(request.auth.uid)).data;
+      return validRoomId(rid)
+        && data.keys().hasAll(['version', 'creator_uid', 'created_at', 'topic', 'context', 'max_turns', 'paused', 'next_speaker', 'turns_used', 'seq', 'last_message_id', 'deleting'])
+        && data.keys().hasOnly(['version', 'creator_uid', 'created_at', 'topic', 'context', 'max_turns', 'paused', 'next_speaker', 'turns_used', 'seq', 'last_message_id', 'deleting'])
+        && data.version == 1 && data.creator_uid == request.auth.uid && data.created_at == request.time
+        && validConfig(data) && data.paused == true && data.next_speaker == 'server'
+        && data.turns_used == 0 && data.seq == 0 && data.last_message_id == '' && data.deleting == false
+        && joining.role == 'owner' && joining.token == keys.owner && joining.joined_at == request.time
+        && quota.last_room_id == rid && quotaAdvanced(request.auth.uid, quota);
+    }
+    function validMessage(data, mid) {
+      return data.keys().hasAll(['seq', 'role', 'content', 'client_message_id', 'created_at'])
+        && data.keys().hasOnly(['seq', 'role', 'content', 'client_message_id', 'created_at'])
+        && validMessageId(mid) && data.client_message_id == mid
+        && data.seq is int && data.seq >= 1 && data.seq <= 100
+        && data.role in ['human', 'server', 'client'] && nonblank(data.content, 16000)
+        && data.created_at == request.time;
+    }
+    function canSpeak(rid, room, role) {
+      return validMember(rid) && active(room) && room.seq < 100 && (
+        (role == 'human' && member(rid).role == 'owner')
+        || (role in ['server', 'client'] && member(rid).role == role + '_agent'
+          && !room.paused && room.turns_used < room.max_turns && room.next_speaker == role)
+      );
+    }
+    function appendHead(rid, old, next) {
+      let msg = getAfter(messagePath(rid, next.last_message_id)).data;
+      return next.diff(old).affectedKeys().hasOnly(['seq', 'last_message_id', 'turns_used', 'next_speaker', 'paused'])
+        && validMessageId(next.last_message_id) && !exists(messagePath(rid, next.last_message_id))
+        && validMessage(msg, next.last_message_id) && msg.seq == next.seq
+        && canSpeak(rid, old, msg.role)
+        && ((msg.role == 'human' && next.turns_used == old.turns_used
+            && next.next_speaker == old.next_speaker && next.paused == old.paused)
+          || (msg.role != 'human' && next.turns_used == old.turns_used + 1
+            && next.next_speaker == (msg.role == 'server' ? 'client' : 'server')
+            && next.paused == (next.turns_used >= old.max_turns)));
+    }
+    function configure(rid, old, next) {
+      return owner(rid) && next.diff(old).affectedKeys().hasOnly(['topic', 'context', 'max_turns', 'paused'])
+        && validConfig(next) && next.paused == (old.paused || old.turns_used >= next.max_turns);
+    }
+    function control(rid, old, next) {
+      return owner(rid) && next.diff(old).affectedKeys().hasOnly(['paused', 'turns_used'])
+        && next.paused is bool && (
+          (next.paused && next.turns_used == old.turns_used)
+          || (!next.paused && next.turns_used == (old.turns_used >= old.max_turns ? 0 : old.turns_used))
+        );
+    }
+
+    match /creation_quotas/{uid} {
+      allow get: if signedIn() && request.auth.uid == uid;
+      allow create, update: if signedIn() && request.auth.uid == uid
+        && quotaAdvanced(uid, request.resource.data)
+        && !exists(roomPath(request.resource.data.last_room_id))
+        && getAfter(roomPath(request.resource.data.last_room_id)).data.creator_uid == uid
+        && getAfter(roomPath(request.resource.data.last_room_id)).data.created_at == request.time;
+    }
+    match /rooms/{rid} {
+      allow get: if validMember(rid);
+      allow create: if signedIn() && initialRoom(rid, request.resource.data);
+      allow update: if (
+        owner(rid) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['deleting'])
+          && request.resource.data.deleting == true
+        ) || (active(resource.data) && (
+          configure(rid, resource.data, request.resource.data)
+          || control(rid, resource.data, request.resource.data)
+          || (request.resource.data.seq == resource.data.seq + 1 && appendHead(rid, resource.data, request.resource.data))
+        ));
+      allow delete: if owner(rid) && resource.data.deleting;
+
+      match /secrets/keys {
+        allow get: if owner(rid);
+        allow create: if signedIn() && validKeys(request.resource.data) && !exists(roomPath(rid))
+          && getAfter(roomPath(rid)).data.creator_uid == request.auth.uid
+          && getAfter(roomPath(rid)).data.created_at == request.time
+          && getAfter(memberPath(rid)).data.role == 'owner'
+          && getAfter(memberPath(rid)).data.token == request.resource.data.owner;
+        allow update: if owner(rid) && active(get(roomPath(rid)).data)
+          && validKeys(request.resource.data)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['viewer', 'server_agent', 'client_agent']);
+        allow delete: if owner(rid) && get(roomPath(rid)).data.deleting;
+      }
+      match /members/{uid} {
+        allow get: if signedIn() && (request.auth.uid == uid || owner(rid));
+        allow list: if owner(rid);
+        allow create: if signedIn() && request.auth.uid == uid
+          && request.resource.data.keys().hasAll(['role', 'token', 'joined_at'])
+          && request.resource.data.keys().hasOnly(['role', 'token', 'joined_at'])
+          && validRole(request.resource.data.role) && validKey(request.resource.data.token)
+          && request.resource.data.joined_at == request.time
+          && getAfter(keysPath(rid)).data[request.resource.data.role] == request.resource.data.token
+          && (!getAfter(roomPath(rid)).data.deleting || request.resource.data.role == 'owner');
+        allow delete: if owner(rid) && get(roomPath(rid)).data.deleting;
+      }
+      match /messages/{mid} {
+        allow read: if validMember(rid);
+        allow create: if validMessage(request.resource.data, mid)
+          && canSpeak(rid, get(roomPath(rid)).data, request.resource.data.role)
+          && request.resource.data.seq == get(roomPath(rid)).data.seq + 1
+          && getAfter(roomPath(rid)).data.seq == request.resource.data.seq
+          && getAfter(roomPath(rid)).data.last_message_id == mid;
+        allow delete: if owner(rid) && get(roomPath(rid)).data.deleting;
+      }
+    }
+  }
+}

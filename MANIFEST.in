@@ -1,0 +1,14 @@
+include SKILL.md LICENSE README.md README.zh-CN.md CHANGELOG.md CONTRIBUTING.md SECURITY.md package.json package-lock.json firebase.json firestore.indexes.json
+recursive-include agents *.yaml
+recursive-include references *.md
+recursive-include scripts *.py *.mjs
+recursive-include cloud *.mjs *.md *.rules
+recursive-include web *.html *.mjs *.css *.json
+recursive-include docs *.md *.png *.svg
+recursive-include tests *.py *.mjs
+global-exclude *.py[cod] .DS_Store firebase-debug.log* firestore-debug.log* credentials.json *.sqlite3
+prune node_modules
+prune build
+prune dist
+prune .runtime
+prune .venv

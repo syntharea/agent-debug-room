@@ -9,15 +9,16 @@ import json
 import os
 from pathlib import Path
 import secrets
+import signal
 import sqlite3
 import tempfile
 import threading
 import urllib.parse
 
 
-NAMES = {'server': '当前助手', 'client': '对方 Agent', 'human': '主持人'}
+NAMES = {'server': 'Server agent', 'client': 'Client agent', 'human': 'Host'}
 TOKEN_ROLES = ('owner', 'viewer', 'server_agent', 'client_agent')
-DEFAULT_CONFIG = {'topic': '跨 Agent 联调', 'context': '', 'max_turns': 20}
+DEFAULT_CONFIG = {'topic': 'Cross-agent debugging', 'context': '', 'max_turns': 20}
 SECURITY_HEADERS = {
     'Cache-Control': 'no-store',
     'Content-Security-Policy': "default-src 'none'; script-src 'self'; style-src 'self'; "
@@ -30,9 +31,10 @@ SECURITY_HEADERS = {
 
 
 class APIError(Exception):
-    def __init__(self, status, message):
+    def __init__(self, status, message, code):
         self.status = status
         self.message = message
+        self.code = code
         super().__init__(message)
 
 
@@ -57,7 +59,7 @@ def timestamp():
 
 def validate_text(value, name, maximum, allow_empty=False):
     if not isinstance(value, str) or len(value) > maximum or (not allow_empty and not value.strip()):
-        raise APIError(400, f'{name} 的内容或长度无效')
+        raise APIError(400, f'{name} has invalid content or length', 'invalid_text')
     return value
 
 
@@ -106,11 +108,11 @@ class RoomState:
             for role in TOKEN_ROLES:
                 if hmac.compare_digest(authorization[7:].encode(), self.credentials[role + '_token'].encode()):
                     return role
-        raise APIError(401, '需要有效的房间访问令牌')
+        raise APIError(401, 'A valid room access token is required', 'unauthorized')
 
     def redact(self, text):
         for token in self.credentials.values():
-            text = text.replace(token, '[已隐藏]')
+            text = text.replace(token, '[redacted]')
         return text
 
     def messages(self, after=0):
@@ -122,7 +124,7 @@ class RoomState:
         with self.lock:
             if role in ('server_agent', 'client_agent'):
                 self.participants[role.removesuffix('_agent')]['last_seen'] = timestamp()
-            return {'title': 'Agent 对话室', 'mode': 'agent_bridge', 'role': role,
+            return {'title': 'Agent Debug Room', 'mode': 'agent_bridge', 'role': role,
                     'topic': self.redact(self.config['topic']), 'context': self.redact(self.config['context']),
                     'paused': self.paused, 'running': False, 'next_speaker': self.next_speaker,
                     'turns_used': self.turns_used, 'max_turns': self.config['max_turns'],
@@ -136,7 +138,7 @@ class RoomState:
 
     def configure(self, body):
         if not isinstance(body, dict) or set(body) - set(DEFAULT_CONFIG):
-            raise APIError(400, '配置仅支持 topic、context 和 max_turns')
+            raise APIError(400, 'Configuration only supports topic, context and max_turns', 'invalid_config')
         with self.lock:
             result = dict(self.config)
             for key, limit in (('topic', 2000), ('context', 32000)):
@@ -145,7 +147,7 @@ class RoomState:
             if 'max_turns' in body:
                 value = body['max_turns']
                 if type(value) is not int or not 1 <= value <= 20:
-                    raise APIError(400, 'max_turns 必须是 1 到 20 之间的整数')
+                    raise APIError(400, 'max_turns must be an integer between 1 and 20', 'invalid_max_turns')
                 result['max_turns'] = value
             atomic_json(self.config_path, result)
             self.config = result
@@ -160,22 +162,22 @@ class RoomState:
 
     def post_message(self, role, body):
         if not isinstance(body, dict):
-            raise APIError(400, '消息格式无效')
-        content = validate_text(body.get('content'), '消息', 16000)
-        client_id = validate_text(body.get('client_message_id'), '消息 ID', 200)
+            raise APIError(400, 'Invalid message format', 'invalid_message')
+        content = validate_text(body.get('content'), 'content', 16000)
+        client_id = validate_text(body.get('client_message_id'), 'client_message_id', 200)
         digest = hashlib.sha256(content.encode()).hexdigest()
         with self.lock:
             previous = self.db.execute('SELECT id, role, request_hash FROM messages WHERE client_message_id = ?',
                                        (client_id,)).fetchone()
             if previous:
                 if previous[1] != role or previous[2] != digest:
-                    raise APIError(409, '该消息 ID 已被用于其他角色或不同内容')
+                    raise APIError(409, 'This message ID is already used by another role or different content', 'message_id_conflict')
                 return self.messages(previous[0] - 1)[0]
             if role != 'human':
                 if self.paused or self.turns_used >= self.config['max_turns']:
-                    raise APIError(409, '房间已暂停，请等待主持人继续')
+                    raise APIError(409, 'The room is paused; wait for the owner to resume', 'room_paused')
                 if role != self.next_speaker:
-                    raise APIError(409, '请等待另一位 Agent 发言')
+                    raise APIError(409, 'Wait for the other agent to speak', 'wrong_turn')
             cursor = self.db.execute('INSERT INTO messages '
                                      '(role, name, content, created_at, client_message_id, request_hash) '
                                      'VALUES (?, ?, ?, ?, ?, ?)',
@@ -190,7 +192,7 @@ class RoomState:
 
     def control(self, body):
         if not isinstance(body, dict) or body.get('action') not in ('start', 'pause'):
-            raise APIError(400, '操作必须是 start 或 pause')
+            raise APIError(400, 'Action must be start or pause', 'invalid_action')
         with self.lock:
             self.paused = body['action'] == 'pause'
             if not self.paused and self.turns_used >= self.config['max_turns']:
@@ -235,24 +237,24 @@ class RoomHandler(BaseHTTPRequestHandler):
 
     def read_json(self):
         if self.headers.get('Transfer-Encoding'):
-            raise APIError(400, '不支持分块请求')
+            raise APIError(400, 'Transfer-Encoding is not supported', 'unsupported_transfer_encoding')
         if self.headers.get_content_type() != 'application/json':
-            raise APIError(400, '请使用 application/json')
+            raise APIError(400, 'Use application/json', 'unsupported_content_type')
         try:
             length = int(self.headers.get('Content-Length', ''))
         except ValueError:
-            raise APIError(411, '需要 Content-Length') from None
+            raise APIError(411, 'Content-Length is required', 'content_length_required') from None
         if length < 0:
-            raise APIError(400, '请求长度无效')
+            raise APIError(400, 'Invalid request length', 'invalid_content_length')
         if length > 65536:
-            raise APIError(413, '请求体不得超过 64 KiB')
+            raise APIError(413, 'The request body must not exceed 64 KiB', 'request_too_large')
         try:
             body = self.rfile.read(length)
             if len(body) != length:
                 raise ValueError()
             return json.loads(body)
         except (ValueError, UnicodeDecodeError):
-            raise APIError(400, 'JSON 格式无效') from None
+            raise APIError(400, 'Invalid JSON', 'invalid_json') from None
 
     def dispatch(self, method):
         try:
@@ -267,21 +269,21 @@ class RoomHandler(BaseHTTPRequestHandler):
                 if method == 'GET' and path == '/api/state':
                     after = urllib.parse.parse_qs(url.query, keep_blank_values=True).get('after', ['0'])
                     if len(after) != 1 or not after[0].isascii() or not after[0].isdigit() or len(after[0]) > 18:
-                        raise APIError(400, 'after 必须是非负整数')
+                        raise APIError(400, 'after must be a non-negative integer', 'invalid_cursor')
                     self.respond(200, room.state(role, int(after[0])))
                     return
                 if method == 'POST' and path == '/api/agent/messages':
                     if role not in ('server_agent', 'client_agent'):
-                        raise APIError(403, '此接口仅限 Agent')
+                        raise APIError(403, 'This endpoint requires an agent token', 'agent_required')
                     self.respond(200, room.post_message(role.removesuffix('_agent'), self.read_json()))
                     return
                 known = (method, path) in {('GET', '/api/config'), ('GET', '/api/invite'),
                                              ('POST', '/api/config'), ('POST', '/api/messages'),
                                              ('POST', '/api/control')}
                 if not known:
-                    raise APIError(404, '未找到接口')
+                    raise APIError(404, 'Endpoint not found', 'not_found')
                 if role != 'owner':
-                    raise APIError(403, '此操作仅限主持人')
+                    raise APIError(403, 'This operation requires the owner token', 'owner_required')
                 if method == 'GET':
                     result = (room.public_config() if path == '/api/config'
                               else {key: value for key, value in room.credentials.items() if key != 'owner_token'})
@@ -298,22 +300,27 @@ class RoomHandler(BaseHTTPRequestHandler):
             static = {'/': ('index.html', 'text/html; charset=utf-8'),
                       '/index.html': ('index.html', 'text/html; charset=utf-8'),
                       '/app.js': ('app.js', 'text/javascript; charset=utf-8'),
-                      '/style.css': ('style.css', 'text/css; charset=utf-8')}
+                      '/style.css': ('style.css', 'text/css; charset=utf-8'),
+                      '/i18n.mjs': ('i18n.mjs', 'text/javascript; charset=utf-8'),
+                      '/favicon.svg': ('favicon.svg', 'image/svg+xml')}
+            for locale in ('en', 'zh-CN', 'zh-TW', 'ja', 'ko', 'es', 'fr', 'de', 'pt-BR', 'ar'):
+                name = f'locales/{locale}.json'
+                static['/' + name] = (name, 'application/json; charset=utf-8')
             if method == 'GET' and path in static:
                 name, content_type = static[path]
                 try:
                     content = (self.server.static_dir / name).read_bytes()
                 except FileNotFoundError:
-                    raise APIError(404, '未找到页面') from None
+                    raise APIError(404, 'Page not found', 'not_found') from None
                 self.respond(200, content, content_type)
                 return
-            raise APIError(404, '未找到页面')
+            raise APIError(404, 'Page not found', 'not_found')
         except APIError as exc:
-            self.respond(exc.status, {'error': exc.message})
+            self.respond(exc.status, {'error': exc.message, 'code': exc.code})
         except (BrokenPipeError, ConnectionResetError, TimeoutError):
             pass
         except Exception:
-            self.respond(500, {'error': '服务暂时无法处理该请求'})
+            self.respond(500, {'error': 'The server could not process this request', 'code': 'internal_error'})
 
     def do_GET(self):
         self.dispatch('GET')
@@ -344,13 +351,16 @@ def main():
         parser.error('--state-dir must be an absolute private directory')
     server = create_server(args.host, args.port, args.state_dir)
     print(f'Agent bridge listening on http://{args.host}:{server.server_port}', flush=True)
+    previous_sigterm = signal.signal(signal.SIGTERM, signal.default_int_handler)
     try:
         server.serve_forever()
     except KeyboardInterrupt:
         pass
     finally:
         server.server_close()
+        signal.signal(signal.SIGTERM, previous_sigterm)
+    return 0
 
 
 if __name__ == '__main__':
-    main()
+    raise SystemExit(main())
