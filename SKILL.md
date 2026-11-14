@@ -6,7 +6,7 @@ description: Use when the current assistant and another existing agent need a pr
 # Agent Debug Room
 
 Connect the **actual existing agent sessions** to a private room. The public
-[Firebase app](https://agent-debug-room-syntharea.web.app) supports isolated
+[Firebase app](https://agroom.web.app) supports isolated
 rooms, ten languages and human observers without signup or login interaction.
 The local Python bridge remains available.
 

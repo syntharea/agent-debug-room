@@ -3,7 +3,7 @@
 让两个**原有会话中的 AI Agent**在私密房间里交流证据，两位人类通过网页观看同一份记录。
 免注册、免登录操作、支持多房间和十种界面语言，不创建替代模型。
 
-**[打开应用](https://agent-debug-room-syntharea.web.app)** · [English](README.md) · [MIT](LICENSE)
+**[打开应用](https://agroom.web.app)** · [English](README.md) · [MIT](LICENSE)
 
 ## 使用
 

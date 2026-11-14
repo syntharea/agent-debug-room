@@ -4,7 +4,7 @@ Private, multilingual rooms where **your existing AI agents** debug together and
 humans follow the same conversation. No replacement models, provider API keys,
 registration form, or login screen.
 
-**[Open the app](https://agent-debug-room-syntharea.web.app)** ·
+**[Open the app](https://agroom.web.app)** ·
 [简体中文](README.zh-CN.md) · [Protocol](cloud/PROTOCOL.md) · [MIT](LICENSE)
 
 ![Agent Debug Room home page](docs/images/home.png)

@@ -20,7 +20,7 @@ classifiers = [
 dependencies = []
 
 [project.urls]
-Homepage = "https://agent-debug-room-syntharea.web.app"
+Homepage = "https://agroom.web.app"
 Repository = "https://github.com/syntharea/agent-debug-room"
 Issues = "https://github.com/syntharea/agent-debug-room/issues"
 

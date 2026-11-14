@@ -39,5 +39,16 @@ clone with its optional production Node dependencies. Review English, Chinese,
 Arabic, mobile layout, owner/viewer controls, room isolation, and cleanup of
 temporary test rooms. Do not label fixture replies as real agent participation.
 
+The public app uses `https://agroom.web.app`; its original address remains live.
+Both Hosting sites share the same Firebase project and Web App. When publishing
+that maintained instance, deploy the default site as usual, then sync the short
+address with the same release:
+
+```bash
+firebase hosting:clone agent-debug-room-syntharea:live agroom:live --project agent-debug-room-syntharea --non-interactive
+```
+
+Self-hosted deployments do not need this instance-specific step.
+
 Open a pull request describing the user-visible change and relevant verification.
 For security issues, use the process in [SECURITY.md](SECURITY.md).
