@@ -185,18 +185,19 @@ class CloudClient:
             self._auth(refresh=True)
             return _http(self.base + path, body, self.profile['auth']['idToken'])
 
-    def _get(self, path, transaction=None, missing=False):
-        suffix = '/' + path
+    def _get(self, path, read_versions=None, missing=False):
         try:
-            if transaction:
-                result = self._fire(':batchGet', {'documents': [self.documents + '/' + path],
-                                                  'transaction': transaction})
+            if read_versions is not None:
+                result = self._fire(':batchGet', {'documents': [self.documents + '/' + path]})
                 if 'found' in result[0]:
-                    return _decode(result[0]['found'])
+                    document = result[0]['found']
+                    read_versions[path] = document['updateTime']
+                    return _decode(document)
+                read_versions[path] = None
                 if missing:
                     return None
                 _fail('not_found', 'Room or document not found', 404)
-            return _decode(self._fire(suffix))
+            return _decode(self._fire('/' + path))
         except CloudError as error:
             if missing and error.code == 'not_found':
                 return None
@@ -253,22 +254,24 @@ class CloudClient:
                 'message_count': room['seq'], 'message_limit': 100, 'deleting': room['deleting']}
 
     def _transaction(self, operation):
+        # Like the Web SDK, use optimistic document versions and one atomic commit.
+        # Built-in beginTransaction is rejected for ordinary Firebase ID tokens.
         for attempt in range(4):
-            transaction = self._fire(':beginTransaction', {'options': {'readWrite': {}}})['transaction']
+            read_versions = {}
             try:
-                writes, result = operation(transaction)
+                writes, result = operation(read_versions)
+                for write in writes:
+                    path = write['update']['name'][len(self.documents) + 1:]
+                    version = read_versions[path]
+                    write['currentDocument'] = ({'updateTime': version} if version is not None
+                                                else {'exists': False})
                 if writes:
-                    self._fire(':commit', {'transaction': transaction, 'writes': writes})
+                    self._fire(':commit', {'writes': writes})
                 return result
             except CloudError as error:
                 if not error.retryable or attempt == 3:
                     raise
                 time.sleep(0.05 * (attempt + 1))
-            finally:
-                try:
-                    self._fire(':rollback', {'transaction': transaction})
-                except CloudError:
-                    pass
         _fail('unavailable', 'The transaction could not complete', 503)
 
     def _append(self, role, body):
@@ -280,13 +283,13 @@ class CloudClient:
         if not isinstance(message_id, str) or not re.fullmatch(r'[A-Za-z0-9_-]{1,200}', message_id):
             _fail('invalid_message_id', 'client_message_id must be 1–200 URL-safe ASCII characters')
         path = self.room_path + '/messages/' + message_id
-        def append(transaction):
-            existing = self._get(path, transaction, missing=True)
+        def append(read_versions):
+            existing = self._get(path, read_versions, missing=True)
             if existing:
                 if existing['role'] != role or existing['content'] != content:
                     _fail('message_id_conflict', 'This message ID has different content or role', 409)
                 return [], self._public_message(existing)
-            room = self._get(self.room_path, transaction)
+            room = self._get(self.room_path, read_versions)
             self._mutable(room)
             if room['seq'] >= 100:
                 _fail('room_full', 'The room has reached its message limit', 409)
@@ -361,8 +364,8 @@ class CloudClient:
                 _fail('invalid_action', 'Action must be start or pause')
         else:
             _fail('not_found', 'Endpoint not found', 404)
-        def update(transaction):
-            room = self._get(self.room_path, transaction)
+        def update(read_versions):
+            room = self._get(self.room_path, read_versions)
             self._mutable(room)
             if route == '/api/config':
                 changes = dict(body)

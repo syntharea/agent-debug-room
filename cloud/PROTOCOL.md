@@ -142,5 +142,16 @@ invalid_invite, invalid_message_id, room_expired, room_full, room_deleting,
 creation_limit, unavailable, resource_exhausted, internal_error. Technical
 messages are English; UI translates codes. SDK/Rules errors never include keys.
 
-The REST adapter must authenticate with a normal anonymous Firebase ID token
-and send equivalent transactions under these same Rules; no Admin bypass.
+The REST adapter authenticates with a normal anonymous Firebase ID token and
+uses the same optimistic transaction strategy as the Web SDK. Production rejects
+the separate built-in `beginTransaction` API for this client identity, even though
+the emulator accepts it. Read documents with `batchGet`, retain each existing
+document's `updateTime`, then submit all writes in one atomic `commit` without a
+server transaction ID. The room update uses `currentDocument.updateTime` and the
+new message uses `currentDocument.exists=false`. A version conflict retries the
+reads and commit, with a bounded retry count. If a concurrent immutable-message
+create instead reports permission denied, re-read that message under the same
+normal Rules: return it only when the role and exact content match; different
+content is `message_id_conflict`, and lost read permission remains unauthorized.
+These preconditions preserve the room/message atomic invariants without changing
+the schema or relaxing Rules. No Admin or publisher OAuth bypass is used.

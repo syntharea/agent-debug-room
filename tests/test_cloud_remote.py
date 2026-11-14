@@ -43,6 +43,58 @@ class RemoteBoundaryTests(unittest.TestCase):
                     self.assertEqual(state['expired'], expected_expired)
                     self.assertEqual(state['deleting'], changes.get('deleting', False))
 
+    def test_rest_transaction_uses_atomic_version_commit_when_begin_is_denied(self):
+        from agent_debug_room.cloud_client import CloudClient, CloudError, _encode
+        with tempfile.TemporaryDirectory() as temporary:
+            client = CloudClient(Path(temporary), invitation())
+            room_name = client.documents + '/' + client.room_path
+            message_name = room_name + '/messages/version-test'
+            room_fields = {'created_at': {'timestampValue': '2099-01-01T00:00:00Z'},
+                           **{key: _encode(value) for key, value in {
+                               'topic': 'Fixture', 'context': '', 'paused': False, 'next_speaker': 'server',
+                               'turns_used': 0, 'max_turns': 20, 'seq': 0, 'deleting': False}.items()}}
+            document = {'name': room_name, 'fields': room_fields, 'updateTime': '2026-11-01T00:00:00Z'}
+            stored = {}
+            conflicts = []
+            def firestore(path, body=None):
+                if path == ':beginTransaction':
+                    raise CloudError('unauthorized', 401, 'Production rejects the server transaction API')
+                if path == ':batchGet':
+                    if 'transaction' in body or 'newTransaction' in body:
+                        raise CloudError('unauthorized', 401, 'No built-in server transactions')
+                    name = body['documents'][0]
+                    if name == room_name:
+                        return [{'found': document}]
+                    return [{'missing': name}]
+                if path == ':commit':
+                    if 'transaction' in body:
+                        raise CloudError('unauthorized', 401, 'No built-in server transactions')
+                    message, room = body['writes']
+                    if message.get('currentDocument') != {'exists': False}:
+                        raise CloudError('unauthorized', 401, 'The new message must be immutable')
+                    if room.get('currentDocument') != {'updateTime': document['updateTime']}:
+                        raise CloudError('unavailable', 409, 'The room version changed', True)
+                    if not conflicts:
+                        conflicts.append(True)
+                        document['updateTime'] = '2026-11-01T00:00:01Z'
+                        raise CloudError('unavailable', 409, 'A concurrent metadata update won', True)
+                    stored[message_name] = {**message['update'], 'fields': {
+                        **message['update']['fields'], 'created_at': {'timestampValue': '2026-11-01T00:00:02Z'}}}
+                    return {}
+                if path == '/' + client.room_path + '/messages/version-test':
+                    if message_name not in stored:
+                        raise CloudError('not_found', 404, 'Message not found')
+                    return stored[message_name]
+                raise AssertionError('Unexpected Firestore operation: ' + path)
+            with patch.object(client, '_fire', side_effect=firestore):
+                result = client.request('/api/agent/messages',
+                                        {'content': 'original evidence', 'client_message_id': 'version-test'})
+            self.assertEqual(result['id'], 1)
+            self.assertEqual(result['role'], 'server')
+            self.assertEqual(result['content'], 'original evidence')
+            self.assertEqual(len(stored), 1)
+            self.assertEqual(conflicts, [True])
+
     def test_connect_rejects_invalid_invite_before_any_auth_request(self):
         with tempfile.TemporaryDirectory() as temporary:
             invite = Path(temporary) / 'bad.json'
