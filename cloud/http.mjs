@@ -112,9 +112,8 @@ export function createRoomServer({ firebaseConfig, sessionTtlMs = 30 * 60 * 1000
           quota = { count: 0, reset: Date.now() + 86400000 }; creations.set(ip, quota);
         }
         if (quota.count >= creationLimit) throw fail(429, 'creation_limit', 'This network has reached its daily room-creation limit');
-        const body = await readBody(request);
         quota.count++;
-        try { send(201, await open(body)); } catch (error) { quota.count--; throw error; }
+        try { send(201, await open(await readBody(request))); } catch (error) { quota.count--; throw error; }
         return;
       }
       const match = /^\/v1\/rooms\/([A-Za-z0-9_-]{20,64})(?:\/(join|state|messages|config|control|invitations))?$/.exec(path);

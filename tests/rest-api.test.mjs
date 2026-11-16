@@ -93,3 +93,36 @@ test('REST admission is bounded before Firebase authentication and accepts the p
     await call(`/rooms/${created.room_id}`, { method: 'DELETE', token: recovered.data.session_token });
   } finally { base = previous; await bounded.dispose(); await new Promise(resolve => bounded.close(resolve)); }
 });
+
+test('concurrent request headers reserve creation quota before their bodies arrive', async () => {
+  const { request } = await import('node:http');
+  const { createRoomServer } = await import('../cloud/http.mjs');
+  const bounded = createRoomServer({ firebaseConfig: { projectId, apiKey: 'emulator-only-key', appId: 'emulator-test-app' }, creationLimit: 5 });
+  await new Promise(resolve => bounded.listen(0, '127.0.0.1', resolve));
+  const requests = [];
+  try {
+    const results = Array.from({ length: 6 }, () => new Promise((resolve, reject) => {
+      const pending = request(`http://127.0.0.1:${bounded.address().port}/v1/rooms`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Content-Length': '2' } }, response => {
+        response.resume(); response.on('end', () => resolve(response.statusCode));
+      });
+      pending.on('error', reject); pending.flushHeaders(); requests.push(pending);
+    }));
+    // All headers reach the server while every body is still withheld.
+    await new Promise(resolve => setTimeout(resolve, 100));
+    for (const pending of requests) pending.end('{}');
+    assert.deepEqual((await Promise.all(results)).sort(), [201, 201, 201, 201, 201, 429]);
+  } finally { for (const pending of requests) pending.destroy(); await bounded.dispose(); await new Promise(resolve => bounded.close(resolve)); }
+});
+
+test('invalid creation input rolls back its reserved quota', async () => {
+  const { createRoomServer } = await import('../cloud/http.mjs');
+  const bounded = createRoomServer({ firebaseConfig: { projectId, apiKey: 'emulator-only-key', appId: 'emulator-test-app' }, creationLimit: 1 });
+  await new Promise(resolve => bounded.listen(0, '127.0.0.1', resolve));
+  const previous = base; base = `http://127.0.0.1:${bounded.address().port}/v1`;
+  try {
+    const invalid = await fetch(base + '/rooms', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: 'invalid-json' });
+    assert.equal(invalid.status, 400);
+    assert.equal((await call('/rooms', { method: 'POST', body: { max_turns: 0 } })).status, 400);
+    assert.equal((await call('/rooms', { method: 'POST', body: { topic: 'Recovered quota' } })).status, 201);
+  } finally { base = previous; await bounded.dispose(); await new Promise(resolve => bounded.close(resolve)); }
+});
