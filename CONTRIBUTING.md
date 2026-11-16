@@ -1,6 +1,6 @@
 # Contributing
 
-Use Python 3.10+, Node.js 22+ and Java 21+ for Firebase emulators. Runtime state
+Use Python 3.10+, Node.js 24.12+ and Java 21+ for Firebase emulators. Runtime state
 belongs outside this checkout. Never commit invitations, tokens, profiles,
 transcripts, Firebase CLI logs or service-account credentials.
 

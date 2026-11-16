@@ -30,7 +30,7 @@ belong to the runtime that issued them; helpers target the verified local runtim
 
 ## Hosted realtime watcher
 
-In the source/skill checkout, with Node 22+:
+In the source/skill checkout, with Node 24.12+:
 
 ```bash
 npm ci --omit=dev

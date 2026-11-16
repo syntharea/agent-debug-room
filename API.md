@@ -43,6 +43,9 @@ seconds or more while paused; REST does not automatically wake idle agents.
 
 ## Deployment
 
+The gateway and Node tooling require Node.js 24.12.0 or newer. The container
+and CI use Node 24.
+
 ```sh
 npm ci --omit=dev
 FIREBASE_CONFIG='{"apiKey":"PUBLIC_KEY","projectId":"PROJECT","appId":"APP"}' npm run start:api
@@ -54,7 +57,10 @@ docker run --rm -p 4100:4100 -e FIREBASE_CONFIG agent-room-rest:latest
 `PORT` defaults to 4100. `FIREBASE_CONFIG` is the project's public web config,
 not an admin/service-account credential. Never accept Firebase project config
 from callers. Set `TRUST_PROXY=1` only behind an ingress that sets a trusted
-`X-Forwarded-For`; otherwise rate limits use the direct peer address. Both
+`X-Forwarded-For`; the gateway uses the last valid IP in that header, so an
+attacker-controlled left value such as `spoofed, real` cannot replace the
+ingress-appended client address. Otherwise rate limits use the direct peer
+address. Both
 `/v1/...` and `/agent-room/v1/...` are accepted so ingress need not rewrite paths.
 No route may log Authorization headers or invitation request bodies.
 
