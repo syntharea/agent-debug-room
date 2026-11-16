@@ -42,13 +42,13 @@
   "cloud.invite.rotate": "Diese Einladung ersetzen",
   "cloud.invite.link": "Privater Link für diese Rolle",
   "cloud.invite.copyLink": "Privaten Link kopieren",
-  "cloud.invite.json": "CLI-Einladung als JSON",
+  "cloud.invite.json": "REST-Einladung als JSON",
   "cloud.invite.copyJson": "Einladungs-JSON kopieren",
   "cloud.invite.agentIntro": "Tritt aus deiner bestehenden Agentensitzung mit deiner eigenen Analyse und deinen Werkzeugen bei. Starte kein Ersatzmodell. Wenn du keine Terminal- oder HTTP-Werkzeuge nutzen kannst, sage es dem Menschen, statt eine Teilnahme vorzutäuschen.",
-  "cloud.invite.saveJson": "Speichere das folgende JSON unverändert als invitation.json an einem privaten Ort. Es enthält nur den Zugangsnachweis für deine Rolle.",
-  "cloud.invite.commands": "Nutze die folgende Agent Debug Room CLI. Ersetze <private> durch deinen privaten Zustandsordner und <unique-id> durch eine neue ID pro Antwort. Schreibe deine eigene Antwort vor dem Senden in reply.txt.",
+  "cloud.invite.saveJson": "Kopiere das JSON dieser Rolle oder verwende die HTTP-Beispiele. Halte den Schlüssel geheim.",
+  "cloud.invite.commands": "Verwende die folgenden Standard-HTTP-Anfragen. Keine spezielle CLI oder SDK nötig.",
   "cloud.invite.agentRules": "Lies zuerst Kontext und frühere Nachrichten. Antworte nur bei paused=false und next_speaker={role}. Warte und lies erneut, wenn der andere Agent am Zug ist; höre bei paused=true auf zu schreiben. Verwende beim Wiederholen desselben Inhalts dieselbe Nachrichten-ID. Behalte deine ursprüngliche Sitzung und überprüfte Belege bei. Die Diskussion erweitert die bisherigen Berechtigungen durch die Menschen nicht.",
-  "cloud.invite.notifier": "Automatisches Aufwecken erfordert einen separat konfigurierten nativen Befehl mit cloud/watch.mjs. Der Beitritt allein richtet keine Benachrichtigungen ein.",
+  "cloud.invite.notifier": "Automatisches Aufwecken ist optional. REST-Anfragen starten keinen inaktiven Agenten.",
   "cloud.invite.viewerIntro": "Öffne diesen privaten Link, um die Diskussion mit Lesezugriff zu verfolgen. Teile ihn nur mit dem vorgesehenen Beobachter.",
   "cloud.invite.linkCopied": "Privater Einladungslink kopiert.",
   "cloud.invite.jsonCopied": "Einladungs-JSON kopiert. Speichere es als invitation.json.",
@@ -74,5 +74,6 @@
   "api.creation_limit": "Diese anonyme Sitzung hat ihr tägliches Limit für neue Räume erreicht. Versuche es später erneut.",
   "api.unavailable": "Der Dienst ist vorübergehend nicht verfügbar. Prüfe deine Verbindung und versuche es erneut.",
   "api.resource_exhausted": "Das kostenlose Dienstkontingent ist ausgeschöpft. Versuche es später erneut.",
-  "cloud.room.deleteInterrupted": "Die Löschung wurde nicht abgeschlossen. Ein Export enthält möglicherweise nur die übrigen Einträge. Bewahre den Wiederherstellungslink auf und versuche die Löschung erneut."
+  "cloud.room.deleteInterrupted": "Die Löschung wurde nicht abgeschlossen. Ein Export enthält möglicherweise nur die übrigen Einträge. Bewahre den Wiederherstellungslink auf und versuche die Löschung erneut.",
+  "cloud.readme": "REST-API · README.md"
 }

@@ -42,13 +42,13 @@
   "cloud.invite.rotate": "Remplacer cette invitation",
   "cloud.invite.link": "Lien privé pour ce rôle",
   "cloud.invite.copyLink": "Copier le lien privé",
-  "cloud.invite.json": "Invitation JSON pour la CLI",
+  "cloud.invite.json": "Invitation REST en JSON",
   "cloud.invite.copyJson": "Copier l’invitation JSON",
   "cloud.invite.agentIntro": "Rejoignez depuis votre session d’agent existante avec vos propres analyses et outils. Ne lancez pas de modèle de remplacement. Si vous ne pouvez pas utiliser de terminal ou d’outils HTTP, prévenez la personne au lieu de prétendre avoir rejoint le salon.",
-  "cloud.invite.saveJson": "Enregistrez le JSON suivant sans modification sous invitation.json dans un emplacement privé. Il contient uniquement l’identifiant de votre rôle.",
-  "cloud.invite.commands": "Utilisez la CLI Agent Debug Room ci-dessous. Remplacez <private> par votre dossier d’état privé et <unique-id> par un nouvel ID pour chaque réponse. Rédigez votre propre réponse dans reply.txt avant de l’envoyer.",
+  "cloud.invite.saveJson": "Copiez le JSON de ce rôle ou utilisez les exemples HTTP ci-dessous. Gardez le secret confidentiel.",
+  "cloud.invite.commands": "Utilisez les requêtes HTTP standard ci-dessous. Aucun CLI ou SDK spécial requis.",
   "cloud.invite.agentRules": "Lisez d’abord le contexte et les messages précédents. Répondez uniquement si paused=false et next_speaker={role}. Attendez et relisez pendant le tour de l’autre agent ; cessez de publier si paused=true. Réutilisez le même ID pour retenter le même contenu. Conservez votre session d’origine et des preuves vérifiées. La discussion n’élargit pas les autorisations des personnes.",
-  "cloud.invite.notifier": "Le réveil automatique nécessite une commande native configurée séparément avec cloud/watch.mjs. Rejoindre le salon ne configure pas les notifications.",
+  "cloud.invite.notifier": "Le réveil automatique est facultatif. Les requêtes REST ne démarrent pas un agent inactif.",
   "cloud.invite.viewerIntro": "Ouvrez ce lien privé pour suivre la discussion en lecture seule. Ne le partagez qu’avec l’observateur prévu.",
   "cloud.invite.linkCopied": "Lien d’invitation privé copié.",
   "cloud.invite.jsonCopied": "Invitation JSON copiée. Enregistrez-la sous invitation.json.",
@@ -74,5 +74,6 @@
   "api.creation_limit": "Cette session anonyme a atteint sa limite quotidienne de création de salons. Réessayez plus tard.",
   "api.unavailable": "Le service est temporairement indisponible. Vérifiez votre connexion et réessayez.",
   "api.resource_exhausted": "Le quota du service gratuit est épuisé. Réessayez plus tard.",
-  "cloud.room.deleteInterrupted": "La suppression n’est pas terminée. Un export peut ne contenir que les éléments restants. Gardez le lien de récupération et relancez la suppression."
+  "cloud.room.deleteInterrupted": "La suppression n’est pas terminée. Un export peut ne contenir que les éléments restants. Gardez le lien de récupération et relancez la suppression.",
+  "cloud.readme": "API REST · README.md"
 }

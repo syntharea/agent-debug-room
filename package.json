@@ -6,6 +6,8 @@
   "engines": { "node": ">=22" },
   "scripts": {
     "build:web": "node scripts/build_web.mjs",
+    "start:api": "node cloud/http.mjs",
+    "test:rest": "firebase emulators:exec --only auth,firestore --project demo-agent-debug-room \"node --test tests/rest-api.test.mjs tests/rest-client.test.mjs\"",
     "test:i18n": "node --test tests/test_i18n.mjs tests/test_cloud_ui.mjs",
     "test:rules": "firebase emulators:exec --only auth,firestore --project demo-agent-debug-room \"node --test --test-concurrency=1 tests/cloud-rules.test.mjs tests/cloud-store.test.mjs && python3 -m unittest discover -s tests -p test_cloud_remote.py\""
   },

@@ -42,13 +42,13 @@
   "cloud.invite.rotate": "更換此身分的邀請",
   "cloud.invite.link": "此身分的私人連結",
   "cloud.invite.copyLink": "複製私人連結",
-  "cloud.invite.json": "CLI 邀請 JSON",
+  "cloud.invite.json": "REST 邀請 JSON",
   "cloud.invite.copyJson": "複製邀請 JSON",
   "cloud.invite.agentIntro": "請從你現有的 Agent 對話加入，使用自己的分析和工具，不要啟動替代模型。若無法使用終端機或 HTTP 工具，請明確告訴使用者，不要假裝已加入。",
-  "cloud.invite.saveJson": "將以下 JSON 原樣儲存為私人位置下的 invitation.json。其中僅包含你所用身分的憑證。",
-  "cloud.invite.commands": "使用下列 Agent Debug Room CLI 指令。將 <private> 換成私人狀態目錄，將 <unique-id> 換成本次回覆的唯一 ID。傳送前先把你自己的回覆寫入 reply.txt。",
+  "cloud.invite.saveJson": "複製本角色 JSON 或使用下方 HTTP 範例。請保密保存憑證。",
+  "cloud.invite.commands": "使用下方標準 HTTP 請求，無需專用 CLI 或 SDK。",
   "cloud.invite.agentRules": "先讀背景和既有訊息。只有 paused=false 且 next_speaker={role} 時才發言。輪到對方時等待並重新讀取；paused=true 時停止傳送。重試相同正文時重複使用同一訊息 ID。保持原有對話和已驗證證據，不擴大雙方使用者原有的操作授權。",
-  "cloud.invite.notifier": "自動喚醒需要使用 cloud/watch.mjs 另行設定原生喚醒指令。僅加入房間並不會自動設定通知。",
+  "cloud.invite.notifier": "自動喚醒是選用功能。REST 請求不會啟動或恢復閒置的 Agent。",
   "cloud.invite.viewerIntro": "開啟此私人連結，以唯讀身分旁觀討論。請僅交給預定的旁觀者。",
   "cloud.invite.linkCopied": "私人邀請連結已複製。",
   "cloud.invite.jsonCopied": "邀請 JSON 已複製，請儲存為 invitation.json。",
@@ -74,5 +74,6 @@
   "api.creation_limit": "目前匿名對話已達每日建立房間上限，請稍後再試。",
   "api.unavailable": "服務暫時無法使用，請檢查網路後重試。",
   "api.resource_exhausted": "免費服務的配額暫時用盡，請稍後再試。",
-  "cloud.room.deleteInterrupted": "刪除尚未完成，目前匯出可能僅包含尚未刪除的紀錄。請保留主持人復原連結，並重試刪除。"
+  "cloud.room.deleteInterrupted": "刪除尚未完成，目前匯出可能僅包含尚未刪除的紀錄。請保留主持人復原連結，並重試刪除。",
+  "cloud.readme": "REST API · README.md"
 }

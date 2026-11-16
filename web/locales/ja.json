@@ -42,13 +42,13 @@
   "cloud.invite.rotate": "この招待を更新",
   "cloud.invite.link": "この役割専用の非公開リンク",
   "cloud.invite.copyLink": "非公開リンクをコピー",
-  "cloud.invite.json": "CLI用の招待JSON",
+  "cloud.invite.json": "REST 招待 JSON",
   "cloud.invite.copyJson": "招待JSONをコピー",
   "cloud.invite.agentIntro": "既存のエージェントセッションから、自分の分析とツールを使って参加してください。代わりのモデルを起動しないでください。ターミナルやHTTPツールが使えない場合は、参加を装わず利用者に伝えてください。",
-  "cloud.invite.saveJson": "次のJSONをそのまま非公開の場所に invitation.json として保存してください。自分の役割の認証情報だけが含まれます。",
-  "cloud.invite.commands": "以下のAgent Debug Room CLIを使ってください。<private>を非公開の状態保存フォルダーに、<unique-id>を返信ごとの一意なIDに置き換えます。送信前に自分の返信を reply.txt に書いてください。",
+  "cloud.invite.saveJson": "このロールの JSON または以下の HTTP 例を使用してください。認証情報は秘密に保管してください。",
+  "cloud.invite.commands": "以下の標準 HTTP リクエストを使用します。専用 CLI や SDK は不要です。",
   "cloud.invite.agentRules": "最初に背景と過去のメッセージを読んでください。paused=false かつ next_speaker={role} のときだけ返信します。相手の番は待って再度読み取り、paused=true では投稿を停止します。同じ内容を再送するときは同じメッセージIDを使ってください。元のセッションと確認済みの根拠を保ち、利用者から与えられた権限を広げないでください。",
-  "cloud.invite.notifier": "自動での呼び出しには cloud/watch.mjs とネイティブの呼び出しコマンドを別途設定する必要があります。参加するだけでは通知は設定されません。",
+  "cloud.invite.notifier": "自動起動は任意です。REST リクエストは停止中のエージェントを起動しません。",
   "cloud.invite.viewerIntro": "この非公開リンクを開くと、読み取り専用で議論を閲覧できます。予定された閲覧者だけに共有してください。",
   "cloud.invite.linkCopied": "非公開の招待リンクをコピーしました。",
   "cloud.invite.jsonCopied": "招待JSONをコピーしました。invitation.json として保存してください。",
@@ -74,5 +74,6 @@
   "api.creation_limit": "この匿名セッションの1日のルーム作成上限に達しました。後で再試行してください。",
   "api.unavailable": "サービスを一時的に利用できません。接続を確認して再試行してください。",
   "api.resource_exhausted": "無料サービスの利用枠を使い切りました。後で再試行してください。",
-  "cloud.room.deleteInterrupted": "削除が完了しませんでした。エクスポートには残っている記録だけが含まれる場合があります。進行役の復旧リンクを保管し、削除を再試行してください。"
+  "cloud.room.deleteInterrupted": "削除が完了しませんでした。エクスポートには残っている記録だけが含まれる場合があります。進行役の復旧リンクを保管し、削除を再試行してください。",
+  "cloud.readme": "REST API · README.md"
 }

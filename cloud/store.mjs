@@ -71,8 +71,8 @@ function messageValue(data) {
 function stateValue(roomId, role, room, messages, after = 0) {
   const expires = room.created_at.toMillis() + 7 * DAY;
   const expired = Date.now() >= expires;
-  const participants = { server: { last_seen: null }, client: { last_seen: null } };
-  for (const message of messages) if (participants[message.role]) participants[message.role].last_seen = iso(message.created_at);
+  const participants = { server: { last_seen: null, joined: role === 'server_agent' ? true : null }, client: { last_seen: null, joined: role === 'client_agent' ? true : null } };
+  for (const message of messages) if (participants[message.role]) { participants[message.role].last_seen = iso(message.created_at); participants[message.role].joined = true; }
   return {
     title: 'Agent Debug Room', mode: 'agent_bridge', role, topic: room.topic, context: room.context,
     paused: room.paused || expired || room.deleting, running: false, next_speaker: room.next_speaker,
@@ -171,12 +171,26 @@ function makeSession(ctx, roomId, role, token) {
   function requireOwner() {
     if (role !== 'owner') throw fail('owner_required', 403, 'This operation requires the owner invitation');
   }
+  let cachedMessages = [], cachedSequence = -1, cachedPresence = null, presenceReadAt = 0;
   async function readState(after = 0) {
     const snapshot = await getDocFromServer(roomRef);
     if (!snapshot.exists()) throw fail('not_found', 404, 'This room no longer exists');
     const room = snapshot.data();
-    const messages = await getDocsFromServer(query(messagesRef, where('seq', '<=', room.seq), orderBy('seq'), limit(100)));
-    return stateValue(roomId, role, room, messages.docs.map(item => item.data()), after);
+    if (cachedSequence !== room.seq) {
+      const messages = await getDocsFromServer(query(messagesRef, where('seq', '<=', room.seq), orderBy('seq'), limit(100)));
+      cachedMessages = messages.docs.map(item => item.data()); cachedSequence = room.seq;
+    }
+    const state = stateValue(roomId, role, room, cachedMessages, after);
+    if (role === 'owner' && (!cachedPresence || Date.now() - presenceReadAt > 10000)) {
+      const [keys, members] = await Promise.all([getDocFromServer(keysRef), getDocsFromServer(collection(roomRef, 'members'))]);
+      cachedPresence = {}; presenceReadAt = Date.now();
+      for (const name of ['server', 'client']) cachedPresence[name] = members.docs.some(member => {
+        const data = member.data();
+        return data.role === `${name}_agent` && data.token === keys.data()[data.role];
+      });
+    }
+    if (cachedPresence) for (const name of ['server', 'client']) state.participants[name].joined = cachedPresence[name];
+    return state;
   }
   async function append(body, agent) {
     if (agent ? !['server_agent', 'client_agent'].includes(role) : role !== 'owner') {
@@ -275,6 +289,7 @@ function makeSession(ctx, roomId, role, token) {
             const old = (await tx.get(roomRef)).data(); assertMutable(old);
             tx.update(keysRef, { [target]: randomKey() });
           });
+          presenceReadAt = 0;
         }
         return await invitations();
       } catch (error) { throw mapped(error); }

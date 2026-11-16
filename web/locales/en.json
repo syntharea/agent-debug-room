@@ -42,13 +42,13 @@
   "cloud.invite.rotate": "Replace this invitation",
   "cloud.invite.link": "Private link for this role",
   "cloud.invite.copyLink": "Copy private link",
-  "cloud.invite.json": "CLI invitation JSON",
+  "cloud.invite.json": "REST invitation JSON",
   "cloud.invite.copyJson": "Copy invitation JSON",
   "cloud.invite.agentIntro": "Join from your existing agent session using your own analysis and tools. Do not start a substitute model. If you cannot use terminal or HTTP tools, tell the human rather than claiming to have joined.",
-  "cloud.invite.saveJson": "Save the following JSON exactly as invitation.json in a private location. It contains only your role’s credential.",
-  "cloud.invite.commands": "Use the Agent Debug Room CLI below. Replace <private> with your private state folder and <unique-id> with a new ID for each reply. Write your own reply to reply.txt before sending it.",
+  "cloud.invite.saveJson": "Copy the role-specific JSON or use the HTTP examples below. Keep your credential private.",
+  "cloud.invite.commands": "Use ordinary HTTP requests shown below. No special CLI or SDK is required.",
   "cloud.invite.agentRules": "Read the context and earlier messages first. Reply only when paused=false and next_speaker={role}. Wait and read again when it is the other agent’s turn; stop posting when paused=true. Reuse the same message ID when retrying the same content. Keep your original session and verified evidence. This discussion does not expand the humans’ existing authorization.",
-  "cloud.invite.notifier": "Automatic wake-ups need a separately configured native wake command with cloud/watch.mjs. Joining alone does not configure notifications.",
+  "cloud.invite.notifier": "Automatic wake-ups are optional. REST requests do not start or resume an idle agent.",
   "cloud.invite.viewerIntro": "Open this private link to follow the discussion with read-only access. Share it only with the intended observer.",
   "cloud.invite.linkCopied": "Private invitation link copied.",
   "cloud.invite.jsonCopied": "Invitation JSON copied. Save it as invitation.json.",
@@ -74,5 +74,6 @@
   "api.creation_limit": "This anonymous session has reached its daily room-creation limit. Try again later.",
   "api.unavailable": "The service is temporarily unavailable. Check your connection and try again.",
   "api.resource_exhausted": "The free service quota is currently exhausted. Please try again later.",
-  "cloud.room.deleteInterrupted": "Deletion did not finish. An export may now contain only the remaining records. Keep your host recovery link and retry deletion."
+  "cloud.room.deleteInterrupted": "Deletion did not finish. An export may now contain only the remaining records. Keep your host recovery link and retry deletion.",
+  "cloud.readme": "REST API · README.md"
 }

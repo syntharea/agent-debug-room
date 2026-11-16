@@ -1,3 +1,4 @@
+import { apiBase, createRestRoom, apiRequest } from './api.mjs';
 import { LOCALES, createI18n, setInputValidity, validateFormInputs } from '../agent_debug_room/static/i18n.mjs';
 
 const ROLES = ['owner', 'viewer', 'server_agent', 'client_agent'];
@@ -63,6 +64,29 @@ export function cliInvitation({ origin, roomId, role, token, firebase, emulators
   invitationUrl(origin, roomId, role, token);
   return { protocol: 'agent-debug-room/firebase-v1', url: `${new URL(origin).origin}/r/${roomId}`, room_id: roomId, role, token, firebase, ...(emulators ? { emulators } : {}) };
 }
+export function restInvitation({ origin, roomId, role, token, apiBase: base = apiBase() }) {
+  invitationUrl(origin, roomId, role, token);
+  return { protocol: 'agent-debug-room/rest-v1', api_base: base, room_id: roomId, role, token, readme: `${new URL(origin).origin}/README.md` };
+}
+export function restInstructions(invitation) {
+  const { api_base: base, room_id: roomId, role, token, readme } = invitation;
+  const payload = JSON.stringify({ role, token });
+  const path = `${base}/rooms/${roomId}`;
+  return `REST API: ${base}
+README: ${readme}
+
+1. Join with this role credential (keep it private):
+curl -fsS -X POST '${path}/join' -H 'Content-Type: application/json' --data '${payload}'
+
+2. Copy session_token from the JSON response and set it below:
+SESSION='PASTE_SESSION_TOKEN_HERE'
+curl -fsS '${path}/state?after=0' -H "Authorization: Bearer $SESSION"
+
+3. Read context and messages. Reply only if paused=false and next_speaker=${role.replace('_agent', '')}. Send your own analysis:
+curl -fsS -X POST '${path}/messages' -H "Authorization: Bearer $SESSION" -H 'Content-Type: application/json' --data '{"content":"YOUR_ANALYSIS","client_message_id":"REPLACE_WITH_UNIQUE_ID"}'
+
+Use a fresh client_message_id for every new message. Retry with the same ID and identical content after a network failure; changed content with the same ID returns 409. When paused or waiting for the other role, do not post; wait at least 5 seconds (10 seconds while paused) before reading state again. Advance after to the last message id. On session_expired (401), join again using this same invitation. An invalid/revoked invitation cannot rejoin. REST does not wake an idle agent; native wake integration is optional. Keep your original session and verified evidence. This discussion does not grant production-operation authorization.`;
+}
 export async function loadFirebaseConfig(fetcher = fetch) {
   try {
     const response = await fetcher('/__/firebase/init.json', { cache: 'no-store' });
@@ -119,18 +143,13 @@ async function startLobby() {
   $('create-form').addEventListener('submit', async event => {
     event.preventDefault(); if (busy || !validateFormInputs(event.currentTarget, i18n)) return;
     busy = true; activeError = null; $('create-room').disabled = true; render(i18n);
-    let context;
     try {
-      const firebase = globalThis.agentRoomFirebaseConfig || await loadFirebaseConfig();
-      const { openContext, createRoom } = await import('../cloud/store.mjs');
-      context = await openContext(firebase, globalThis.agentRoomFirebaseOptions || {});
-      const created = await createRoom(context, { topic: $('create-topic').value.trim(), context: $('create-context').value.trim(), max_turns: 20 });
-      const invitation = { roomId: created.roomId, role: 'owner', token: created.token };
+      const created = await createRestRoom({ topic: $('create-topic').value.trim(), context: $('create-context').value.trim(), max_turns: 20 });
+      const invitation = { roomId: created.room_id, role: 'owner', token: created.token };
       saveSession(sessions, invitation); rememberRoom(storage, { ...invitation, topic: $('create-topic').value.trim() });
-      try { await created.session.close(); } catch { /* Creation succeeded; do not create a duplicate room. */ }
-      location.assign(invitationUrl(location.origin, created.roomId, 'owner', created.token));
+      await apiRequest('/session', { method: 'DELETE', token: created.session_token }).catch(() => {});
+      location.assign(invitationUrl(location.origin, created.room_id, 'owner', created.token));
     } catch (error) {
-      if (context) try { await context.close(); } catch { /* Preserve the original failure. */ }
       activeError = error; busy = false; $('create-room').disabled = false; render(i18n); $('lobby-error').focus();
     }
   });

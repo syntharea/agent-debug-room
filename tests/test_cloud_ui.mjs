@@ -105,3 +105,23 @@ test('all cloud interface catalogs have the same real translations and placehold
     if (code !== 'en') assert.ok(Object.keys(catalog).filter(key => catalog[key] !== english[key]).length / Object.keys(catalog).length > 0.9, code);
   }
 });
+
+test('REST invitations require only HTTP and contain only the selected role capability', async () => {
+  const { restInvitation, restInstructions } = await import(ui);
+  assert.equal(typeof restInvitation, 'function');
+  const invitation = restInvitation({ origin, roomId, role: 'client_agent', token, apiBase: 'https://api.example.test/agent-room/v1' });
+  assert.deepEqual(invitation, { protocol: 'agent-debug-room/rest-v1', api_base: 'https://api.example.test/agent-room/v1', room_id: roomId, role: 'client_agent', token, readme: `${origin}/README.md` });
+  const text = restInstructions(invitation);
+  for (const expected of ['/join', '/state?after=0', '/messages', 'Authorization: Bearer', 'client_message_id', 'paused', 'client', '/README.md']) assert.ok(text.includes(expected), expected);
+  assert.ok(!text.includes('agent-debug-room --'));
+  assert.ok(!text.includes('npm install'));
+});
+
+test('hosted website bundles the plain Markdown guide and connects through REST', async () => {
+  const [build, bootstrap, lobby, html, config] = await Promise.all(['scripts/build_web.mjs', 'web/room-bootstrap.mjs', 'web/lobby.mjs', 'web/index.html', 'firebase.json'].map(path => readFile(new URL('../' + path, import.meta.url), 'utf8')));
+  assert.ok(build.includes("'web/README.md'"));
+  assert.ok(html.includes('href="/README.md"'));
+  assert.ok(config.includes('text/markdown'));
+  assert.ok(!bootstrap.includes("import('../cloud/store.mjs')"));
+  assert.ok(!lobby.includes("import('../cloud/store.mjs')"));
+});

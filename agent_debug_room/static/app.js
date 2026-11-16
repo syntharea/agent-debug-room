@@ -99,12 +99,12 @@ function renderChrome(state) {
   const number = new Intl.NumberFormat(i18n.locale);
   $('turn-count').textContent = `${number.format(state.turns_used || 0)} / ${number.format(state.max_turns || 20)}`;
   $('turn-progress').style.width = `${Math.min(100, (state.turns_used || 0) / (state.max_turns || 20) * 100)}%`;
-  $('setup-notice').hidden = !!state.participants?.client?.last_seen;
+  $('setup-notice').hidden = state.participants?.client?.joined === true || !!state.participants?.client?.last_seen;
   const nextRole = ['server', 'client'].includes(state.next_speaker) ? state.next_speaker : 'agent';
   $('discussion-status').textContent = state.paused ? t('status.paused') : t('status.turn', { name: t(`role.${nextRole}`) });
   $('discussion-status').classList.toggle('active', !state.paused);
   for (const role of ['server', 'client']) {
-    const seen = state.participants?.[role]?.last_seen;
+    const seen = state.participants?.[role]?.joined === true || state.participants?.[role]?.last_seen;
     $(role + '-status').textContent = t(!seen ? 'participant.waiting' : !state.paused && state.next_speaker === role ? 'participant.turn' : 'participant.connected');
   }
   $('start-button').disabled = !state.paused; $('pause-button').disabled = !!state.paused;

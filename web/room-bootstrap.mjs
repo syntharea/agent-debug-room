@@ -1,4 +1,5 @@
-import { browserStorage, clearSession, cliInvitation, describeError, forgetRoom, initializeLanguage, invitationUrl, loadFirebaseConfig, parseInvitation, readSession, rememberRoom, saveSession } from './lobby.mjs';
+import { apiBase, joinRestRoom } from './api.mjs';
+import { browserStorage, clearSession, restInvitation, restInstructions, describeError, forgetRoom, initializeLanguage, invitationUrl, parseInvitation, readSession, rememberRoom, saveSession } from './lobby.mjs';
 
 const $ = id => document.getElementById(id);
 function node(tag, { id, className, key, type, dir } = {}) {
@@ -31,7 +32,7 @@ async function startRoom() {
     select.value = language.locale;
   }
   const sessions = browserStorage('sessionStorage'), recents = browserStorage('localStorage');
-  let context, session;
+  let session;
   try {
     const match = location.pathname.match(/^\/r\/([A-Za-z0-9_-]{20,64})$/);
     if (!match) throw Object.assign(new Error('Invalid invitation'), { code: 'invalid_invite' });
@@ -39,10 +40,7 @@ async function startRoom() {
     if (!invitation) throw Object.assign(new Error('Invitation required'), { code: 'invalid_invite' });
     saveSession(sessions, invitation);
     history.replaceState(null, '', location.pathname);
-    const firebase = globalThis.agentRoomFirebaseConfig || await loadFirebaseConfig();
-    const options = globalThis.agentRoomFirebaseOptions || {};
-    const { openContext, joinRoom } = await import('../cloud/store.mjs');
-    context = await openContext(firebase, options); session = await joinRoom(context, invitation);
+    session = await joinRestRoom(invitation);
     const roomUrl = role => invitationUrl(location.origin, invitation.roomId, role, role === invitation.role ? invitation.token : '');
     let currentState = null, activeInvites = null, selectedRole = 'server_agent', deletingRoom = false, deletionInterrupted = false, closed = false;
 
@@ -74,6 +72,8 @@ async function startRoom() {
     const jsonInput = node('textarea', { id: 'cloud-invite-json', dir: 'ltr' }); jsonInput.readOnly = true; jsonInput.rows = 7; jsonInput.spellcheck = false;
     const jsonActions = node('div', { className: 'cloud-invite-actions' }), jsonCopy = node('button', { className: 'button secondary', type: 'button', key: 'cloud.invite.copyJson' }); jsonActions.append(jsonCopy);
     jsonField.append(jsonLabel, jsonInput, jsonActions);
+    const guide = node('a', { key: 'cloud.readme' }); guide.href = '/README.md'; guide.target = '_blank'; guide.rel = 'noopener';
+    jsonField.append(guide);
     const instructionLabel = document.querySelector('label[for="agent-instructions"]'); instructionLabel.classList.remove('sr-only'); instructionLabel.classList.add('cloud-instructions-label');
     instructionLabel.before(inviteControls, linkField, jsonField);
 
@@ -108,9 +108,9 @@ async function startRoom() {
       linkInput.value = invitationUrl(location.origin, invitation.roomId, selectedRole, key);
       const isAgent = selectedRole !== 'viewer'; jsonField.hidden = !isAgent;
       if (isAgent) {
-        jsonInput.value = JSON.stringify(cliInvitation({ origin: location.origin, roomId: invitation.roomId, role: selectedRole, token: key, firebase, emulators: options.emulators }), null, 2);
-        const commands = "agent-debug-room --state-dir '<private>' connect --invite-file invitation.json\nagent-debug-room --state-dir '<private>' state --after 0\nagent-debug-room --state-dir '<private>' reply --file reply.txt --id '<unique-id>'";
-        $('agent-instructions').value = [t('cloud.invite.agentIntro'), t('cloud.invite.saveJson'), jsonInput.value, t('cloud.invite.commands'), commands, t('cloud.invite.agentRules', { role: selectedRole === 'server_agent' ? 'server' : 'client' }), t('cloud.invite.notifier')].join('\n\n');
+        const rest = restInvitation({ origin: location.origin, roomId: invitation.roomId, role: selectedRole, token: key, apiBase: apiBase() });
+        jsonInput.value = JSON.stringify(rest, null, 2);
+        $('agent-instructions').value = [t('cloud.invite.agentIntro'), restInstructions(rest)].join('\n\n');
       } else {
         jsonInput.value = '';
         $('agent-instructions').value = `${t('cloud.invite.viewerIntro')}\n\n${linkInput.value}`;
@@ -166,7 +166,7 @@ async function startRoom() {
     });
 
     const transport = {
-      ...invitation, publicConfig: firebase, i18n: language,
+      ...invitation, i18n: language,
       request: (path, body) => session.request(path, body),
       renderInvite: renderInvitation,
       updateChrome,
@@ -187,7 +187,6 @@ async function startRoom() {
     await import('/app.js');
   } catch (error) {
     if (session) try { await session.close(); } catch { /* Preserve the original failure. */ }
-    else if (context) try { await context.close(); } catch { /* Preserve the original failure. */ }
     showGate(error);
   }
 }

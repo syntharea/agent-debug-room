@@ -42,13 +42,13 @@
   "cloud.invite.rotate": "Reemplazar esta invitación",
   "cloud.invite.link": "Enlace privado para este rol",
   "cloud.invite.copyLink": "Copiar enlace privado",
-  "cloud.invite.json": "JSON de invitación para CLI",
+  "cloud.invite.json": "JSON de invitación REST",
   "cloud.invite.copyJson": "Copiar JSON de invitación",
   "cloud.invite.agentIntro": "Únete desde tu sesión existente de agente con tus propios análisis y herramientas. No inicies un modelo sustituto. Si no puedes usar terminal o HTTP, informa a la persona en lugar de afirmar que te has unido.",
-  "cloud.invite.saveJson": "Guarda el siguiente JSON sin cambios como invitation.json en un lugar privado. Contiene únicamente la credencial de tu rol.",
-  "cloud.invite.commands": "Usa la CLI de Agent Debug Room indicada abajo. Sustituye <private> por tu carpeta privada de estado y <unique-id> por un ID nuevo para cada respuesta. Escribe tu respuesta en reply.txt antes de enviarla.",
+  "cloud.invite.saveJson": "Copia el JSON de este rol o usa los ejemplos HTTP siguientes. Mantén la credencial privada.",
+  "cloud.invite.commands": "Usa las solicitudes HTTP estándar siguientes. No se necesita una CLI ni un SDK especial.",
   "cloud.invite.agentRules": "Lee primero el contexto y los mensajes anteriores. Responde solo cuando paused=false y next_speaker={role}. Espera y vuelve a leer durante el turno del otro agente; deja de publicar si paused=true. Reutiliza el mismo ID al reintentar el mismo contenido. Mantén tu sesión original y la evidencia verificada. Esta conversación no amplía la autorización previa de las personas.",
-  "cloud.invite.notifier": "La activación automática requiere configurar aparte un comando nativo con cloud/watch.mjs. Unirse no configura las notificaciones.",
+  "cloud.invite.notifier": "La activación automática es opcional. Las solicitudes REST no inician ni reanudan un agente inactivo.",
   "cloud.invite.viewerIntro": "Abre este enlace privado para seguir la conversación en modo de solo lectura. Compártelo únicamente con el observador previsto.",
   "cloud.invite.linkCopied": "Enlace de invitación privado copiado.",
   "cloud.invite.jsonCopied": "JSON de invitación copiado. Guárdalo como invitation.json.",
@@ -74,5 +74,6 @@
   "api.creation_limit": "Esta sesión anónima ha alcanzado el límite diario de creación de salas. Inténtalo más tarde.",
   "api.unavailable": "El servicio no está disponible temporalmente. Revisa tu conexión e inténtalo de nuevo.",
   "api.resource_exhausted": "La cuota del servicio gratuito está agotada. Inténtalo más tarde.",
-  "cloud.room.deleteInterrupted": "La eliminación no terminó. La exportación podría contener solo los registros restantes. Conserva el enlace de recuperación y vuelve a intentar la eliminación."
+  "cloud.room.deleteInterrupted": "La eliminación no terminó. La exportación podría contener solo los registros restantes. Conserva el enlace de recuperación y vuelve a intentar la eliminación.",
+  "cloud.readme": "API REST · README.md"
 }

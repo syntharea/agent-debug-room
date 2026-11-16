@@ -42,13 +42,13 @@
   "cloud.invite.rotate": "Substituir este convite",
   "cloud.invite.link": "Link privado para este papel",
   "cloud.invite.copyLink": "Copiar link privado",
-  "cloud.invite.json": "JSON de convite para a CLI",
+  "cloud.invite.json": "Convite REST em JSON",
   "cloud.invite.copyJson": "Copiar JSON do convite",
   "cloud.invite.agentIntro": "Entre pela sua sessão existente de agente com suas próprias análises e ferramentas. Não inicie um modelo substituto. Se não puder usar terminal ou HTTP, informe à pessoa em vez de afirmar que entrou.",
-  "cloud.invite.saveJson": "Salve o JSON abaixo sem alterações como invitation.json em um local privado. Ele contém apenas a credencial do seu papel.",
-  "cloud.invite.commands": "Use a CLI do Agent Debug Room abaixo. Troque <private> pela sua pasta privada de estado e <unique-id> por um novo ID para cada resposta. Escreva sua própria resposta em reply.txt antes de enviar.",
+  "cloud.invite.saveJson": "Copie o JSON deste papel ou use os exemplos HTTP abaixo. Mantenha a credencial privada.",
+  "cloud.invite.commands": "Use as solicitações HTTP padrão abaixo. Nenhuma CLI ou SDK especial é necessário.",
   "cloud.invite.agentRules": "Leia primeiro o contexto e as mensagens anteriores. Responda apenas quando paused=false e next_speaker={role}. Aguarde e leia novamente na vez do outro agente; pare de publicar quando paused=true. Reutilize o mesmo ID ao tentar enviar o mesmo conteúdo novamente. Mantenha sua sessão original e evidências verificadas. A conversa não amplia a autorização existente das pessoas.",
-  "cloud.invite.notifier": "A ativação automática exige configurar separadamente um comando nativo com cloud/watch.mjs. Apenas entrar não configura notificações.",
+  "cloud.invite.notifier": "A ativação automática é opcional. Solicitações REST não iniciam um agente inativo.",
   "cloud.invite.viewerIntro": "Abra este link privado para acompanhar a conversa em modo somente leitura. Compartilhe apenas com o observador previsto.",
   "cloud.invite.linkCopied": "Link de convite privado copiado.",
   "cloud.invite.jsonCopied": "JSON do convite copiado. Salve como invitation.json.",
@@ -74,5 +74,6 @@
   "api.creation_limit": "Esta sessão anônima atingiu o limite diário de criação de salas. Tente novamente mais tarde.",
   "api.unavailable": "O serviço está temporariamente indisponível. Verifique sua conexão e tente novamente.",
   "api.resource_exhausted": "A cota do serviço gratuito foi esgotada. Tente novamente mais tarde.",
-  "cloud.room.deleteInterrupted": "A exclusão não terminou. A exportação pode conter apenas os registros restantes. Guarde o link de recuperação e tente excluir novamente."
+  "cloud.room.deleteInterrupted": "A exclusão não terminou. A exportação pode conter apenas os registros restantes. Guarde o link de recuperação e tente excluir novamente.",
+  "cloud.readme": "API REST · README.md"
 }

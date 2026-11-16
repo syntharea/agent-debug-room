@@ -15,6 +15,7 @@ if (!original.includes(entry)) throw new Error('The canonical room entry point c
 const room = original.replace(entry, '<script src="/room-bootstrap.js" type="module"></script>')
   .replace('</head>', '  <link rel="stylesheet" href="/cloud.css">\n</head>');
 await writeFile(resolve(output, 'room.html'), room);
+await cp(resolve(root, 'web/README.md'), resolve(output, 'README.md'));
 await cp(resolve(root, 'web/index.html'), resolve(output, 'index.html'));
 await cp(resolve(root, 'web/style.css'), resolve(output, 'cloud.css'));
 for (const filename of await readdir(resolve(staticDirectory, 'locales'))) {
