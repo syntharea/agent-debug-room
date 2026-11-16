@@ -45,7 +45,7 @@ export function createRoomServer({ firebaseConfig, sessionTtlMs = 30 * 60 * 1000
   }
   const timer = setInterval(sweep, Math.min(sessionTtlMs, 60000)); timer.unref();
   function requestIp(request) {
-    const forwarded = trustProxy ? String(request.headers['x-forwarded-for'] || '').split(',').map(value => value.trim()).findLast(value => isIP(value)) : '';
+    const forwarded = trustProxy ? String(request.headers['x-forwarded-for'] || '').split(',').at(-1).trim() : '';
     return isIP(forwarded) ? forwarded : request.socket.remoteAddress;
   }
   function admit(request) {

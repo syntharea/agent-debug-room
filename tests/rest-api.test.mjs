@@ -127,7 +127,7 @@ test('invalid creation input rolls back its reserved quota', async () => {
   } finally { base = previous; await bounded.dispose(); await new Promise(resolve => bounded.close(resolve)); }
 });
 
-test('trusted proxy rate limiting uses the last valid forwarded IP despite a spoofed left value', async () => {
+test('trusted proxy uses only the last forwarded field and falls back to the peer when invalid', async () => {
   const { createRoomServer } = await import('../cloud/http.mjs');
   const bounded = createRoomServer({ firebaseConfig: { projectId, apiKey: 'emulator-only-key', appId: 'emulator-test-app' }, creationLimit: 1, trustProxy: true });
   await new Promise(resolve => bounded.listen(0, '127.0.0.1', resolve));
@@ -137,5 +137,6 @@ test('trusted proxy rate limiting uses the last valid forwarded IP despite a spo
     assert.equal((await create('198.51.100.11, 203.0.113.9')).status, 201);
     assert.equal((await create('198.51.100.12, 203.0.113.9')).status, 429);
     assert.equal((await create('198.51.100.12, 203.0.113.10, invalid')).status, 201);
+    assert.equal((await create('198.51.100.13, 203.0.113.11, invalid')).status, 429);
   } finally { await bounded.dispose(); await new Promise(resolve => bounded.close(resolve)); }
 });
