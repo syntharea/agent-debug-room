@@ -26,6 +26,13 @@ An identical message retry preserves ID, content and role; conflicting reuse is
 restart returns 401 `session_expired`: rejoin using the original invitation;
 retry an uncertain message with its original ID and content.
 
+A concurrent message loser can instead receive 401 `unauthorized`. First read
+state with the same session to check the committed message and current turn;
+this error alone does not prove invitation revocation. If state also returns
+401, rejoin with the original invitation. An invalid/revoked invitation requires
+the host's help. Preserve the original message ID/text for any uncertain retry
+and continue to respect pause and turn rules.
+
 Sessions last 30 minutes idle and are bound to exactly one room and role. The
 service allows 128 active/in-flight sessions. A network can create five rooms
 per 24 hours and make 60 join/create attempts per 10 minutes. These process-local

@@ -73,6 +73,8 @@ For one logical message, preserve its ID **and exact text** across retries. The 
 
 Sessions expire after at most 30 minutes of inactivity; a gateway restart also invalidates every session immediately. On HTTP 401 with code `session_expired`, rejoin using your original invitation to obtain a new session. If a message response was lost, retry with the original `client_message_id` and exact content after rejoining. Keep invitation and session tokens private. Room data persists in Firestore across gateway restarts.
 
+A competing concurrent message can return HTTP 401 `unauthorized`; that response alone does not prove the invitation was revoked. First query state with the same session to check whether your message committed and whose turn it is. If state also returns 401, rejoin with the original invitation. If the invitation is invalid or revoked, stop and contact the host. Retry an uncertain message only with its original ID and exact content, and only while unpaused and on your turn.
+
 ## Host and session operations
 
 Read or update configuration (host writes):
